@@ -11,8 +11,20 @@ from passlib.context import CryptContext
 import os
 import sys
 from dotenv import load_dotenv
-from google.auth.transport import requests
-from google.oauth2 import id_token
+# Google OAuth imports - optional for deployment
+try:
+    from google.auth.transport import requests
+    from google.oauth2 import id_token
+    GOOGLE_AUTH_AVAILABLE = True
+except ImportError:
+    GOOGLE_AUTH_AVAILABLE = False
+    # Create dummy classes for when Google auth is not available
+    class requests:
+        pass
+    class id_token:
+        @staticmethod
+        def verify_oauth2_token(*args, **kwargs):
+            raise HTTPException(status_code=501, detail="Google OAuth not configured")
 from pydantic import BaseModel
 import httpx
 import json
@@ -27,7 +39,17 @@ load_dotenv()
 from database import get_db, SessionLocal
 from models import User, InterviewSession, ChatMessage, OTP, ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest, MessageResponse
 from schemas.auth import UserCreate, UserInDB, Token, TokenData, UserResponse
-from email_utils import send_otp_email, send_password_reset_confirmation_email
+# Email utilities - optional for deployment
+try:
+    from email_utils import send_otp_email, send_password_reset_confirmation_email
+    EMAIL_UTILS_AVAILABLE = True
+except ImportError:
+    EMAIL_UTILS_AVAILABLE = False
+    # Create dummy functions when email utils are not available
+    def send_otp_email(*args, **kwargs):
+        return {"status": "error", "message": "Email service not configured"}
+    def send_password_reset_confirmation_email(*args, **kwargs):
+        return {"status": "error", "message": "Email service not configured"}
 
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
@@ -225,6 +247,12 @@ async def login(
 
 def verify_google_token(credential: str) -> dict:
     """Verify Google ID token and return user info"""
+    if not GOOGLE_AUTH_AVAILABLE:
+        raise HTTPException(
+            status_code=501, 
+            detail="Google OAuth is not configured for this deployment"
+        )
+        
     try:
         # Verify the token
         idinfo = id_token.verify_oauth2_token(
@@ -322,6 +350,12 @@ async def google_auth(
     """
     Authenticate with Google OAuth
     """
+    if not GOOGLE_AUTH_AVAILABLE:
+        raise HTTPException(
+            status_code=501, 
+            detail="Google OAuth is not configured for this deployment"
+        )
+        
     try:
         # Verify the Google token
         user_info = verify_google_token(google_data.credential)

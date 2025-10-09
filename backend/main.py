@@ -77,5 +77,16 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     reload = os.getenv("ENVIRONMENT", "development") == "development"
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)
+    
+    print(f"🚀 Starting server on port {port}")
+    print(f"🔧 Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    print(f"🔄 Reload enabled: {reload}")
+    
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=port, 
+        reload=reload,
+        log_level="info"
+    )
 

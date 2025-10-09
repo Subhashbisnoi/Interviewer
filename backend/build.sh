@@ -2,7 +2,13 @@
 # Exit on error
 set -o errexit
 
-echo "🔧 Installing Python dependencies..."
+echo "� Python version:"
+python --version
+
+echo "🔧 Upgrading pip..."
+pip install --upgrade pip
+
+echo "�🔧 Installing Python dependencies..."
 pip install -r requirements.txt
 
 echo "🗄️ Setting up database..."

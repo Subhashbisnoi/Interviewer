@@ -1,10 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Start script for Render deployment
 
-# Activate virtual environment
-source venv/bin/activate
+echo "🚀 Starting AI Interviewer Backend..."
+echo "📁 Current directory: $(pwd)"
+echo "🐍 Python version: $(python --version)"
 
-# Install dependencies if not already installed
-pip install -r requirements.txt
+# Change to backend directory if not already there
+if [[ $(basename $(pwd)) != "backend" ]]; then
+    cd backend
+    echo "📁 Changed to backend directory: $(pwd)"
+fi
 
 # Start the FastAPI server
-python main.py
+exec python main.py

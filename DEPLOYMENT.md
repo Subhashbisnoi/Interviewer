@@ -36,9 +36,11 @@ ALLOWED_ORIGINS=https://your-app-name.vercel.app
 4. Configure the service:
    - **Name**: `ai-interviewer-backend`
    - **Environment**: `Python 3`
-   - **Build Command**: `./backend/build.sh`
+   - **Runtime**: `Python 3.11.9`
+   - **Build Command**: `pip install --upgrade pip && pip install -r backend/requirements.txt`
    - **Start Command**: `cd backend && python main.py`
    - **Root Directory**: Leave empty
+   - **Auto-Deploy**: Yes (recommended)
 
 ### 3. Add Environment Variables in Render
 
@@ -156,11 +158,27 @@ ALLOWED_ORIGINS=https://your-app-name.vercel.app
 
 ### Common Issues
 
-1. **CORS Errors**: Make sure `ALLOWED_ORIGINS` includes your Vercel URL
-2. **OAuth Redirect Errors**: Verify OAuth app settings match production URLs
-3. **Database Connection**: Check `DATABASE_URL` format for PostgreSQL
-4. **Build Failures**: Check logs in Render/Vercel dashboards
-5. **Environment Variables**: Ensure all required vars are set correctly
+1. **Python Version Compatibility**: 
+   - Use Python 3.11.9 (specified in `runtime.txt`)
+   - SQLAlchemy 2.0.25+ is required for Python 3.11+ compatibility
+   - Avoid Python 3.13+ due to current dependency incompatibilities
+
+2. **CORS Errors**: Make sure `ALLOWED_ORIGINS` includes your Vercel URL
+
+3. **OAuth Redirect Errors**: Verify OAuth app settings match production URLs
+
+4. **Database Connection**: Check `DATABASE_URL` format for PostgreSQL
+
+5. **Build Failures**: 
+   - Check logs in Render/Vercel dashboards
+   - Verify all dependencies are compatible
+   - Ensure `requirements.txt` has pinned versions
+
+6. **Environment Variables**: Ensure all required vars are set correctly
+
+7. **Import Errors**: 
+   - Check that all Python modules are properly installed
+   - Verify file paths and module structure
 
 ### Logs and Monitoring
 

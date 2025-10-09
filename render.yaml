@@ -2,11 +2,13 @@ services:
   - type: web
     name: ai-interviewer-backend
     env: python
-    buildCommand: "./backend/build.sh"
+    region: oregon
+    plan: starter
+    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt"
     startCommand: "cd backend && python main.py"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.9
       - key: SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
@@ -17,7 +19,6 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 1440
-    plan: free
 
 databases:
   - name: ai-interviewer-db

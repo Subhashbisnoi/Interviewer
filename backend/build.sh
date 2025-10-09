@@ -12,7 +12,7 @@ echo "🔧 Installing core dependencies first..."
 pip install --no-cache-dir fastapi uvicorn[standard] pydantic[email] sqlalchemy
 
 echo "🔧 Installing remaining dependencies..."
-pip install --no-cache-dir -r requirements-minimal.txt
+pip install --no-cache-dir -r requirements-core.txt
 
 echo "🗄️ Setting up database..."
 # Run database initialization if needed

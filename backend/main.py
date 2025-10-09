@@ -24,8 +24,8 @@ Base.metadata.create_all(bind=engine)
 # Temporarily disable AI features for deployment
 # from api.interview import router as interview_router
 # from api.interview_v2 import router as interview_v2_router
-from api.tts import router as tts_router
-from api.voice import router as voice_router
+# from api.tts import router as tts_router
+# from api.voice import router as voice_router
 from api.auth import router as auth_router
 
 app = FastAPI(
@@ -57,11 +57,11 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
-# Temporarily disable AI features for deployment
+# Temporarily disable AI and audio features for deployment
 # app.include_router(interview_router)
 # app.include_router(interview_v2_router)
-app.include_router(tts_router)
-app.include_router(voice_router)
+# app.include_router(tts_router)
+# app.include_router(voice_router)
 
 # Basic routes
 @app.get("/")
@@ -94,6 +94,25 @@ async def start_interview_placeholder():
         "status": "success",
         "message": "Interview functionality will be available after full deployment",
         "session_id": str(uuid.uuid4())
+    }
+
+@app.get("/api/features")
+async def available_features():
+    """Show what features are currently available."""
+    return {
+        "status": "success",
+        "available_features": [
+            "Authentication",
+            "User Management", 
+            "Health Checks",
+            "API Documentation"
+        ],
+        "disabled_features": [
+            "AI Interviews (temporarily disabled)",
+            "Text-to-Speech (temporarily disabled)", 
+            "Voice Processing (temporarily disabled)"
+        ],
+        "message": "Core API is running. Additional features will be enabled after successful deployment."
     }
 
 if __name__ == "__main__":

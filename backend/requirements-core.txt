@@ -1,4 +1,4 @@
-# Minimal requirements for basic functionality
+# Ultra-minimal requirements - core functionality only
 fastapi
 uvicorn[standard]
 sqlalchemy
@@ -10,7 +10,3 @@ pydantic[email]
 python-dotenv
 python-multipart
 httpx
-
-# Optional audio features (uncomment to enable)
-# gtts
-# pydub

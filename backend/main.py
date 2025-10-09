@@ -2,6 +2,10 @@ import os
 import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Add the current directory to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,12 +25,28 @@ from api.tts import router as tts_router
 from api.voice import router as voice_router
 from api.auth import router as auth_router
 
-app = FastAPI()
+app = FastAPI(
+    title="AI Interviewer API",
+    version="1.0.0",
+    description="AI-powered interview system"
+)
 
-# Configure CORS middleware
+# Configure CORS for production
+origins = []
+if os.getenv("ALLOWED_ORIGINS"):
+    origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS").split(",")]
+else:
+    # Default origins for development
+    origins = [
+        "http://localhost:3000",
+        "http://localhost:3015",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3015",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your frontend URL
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,5 +75,7 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    reload = os.getenv("ENVIRONMENT", "development") == "development"
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)
 

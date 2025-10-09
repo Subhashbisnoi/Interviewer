@@ -135,6 +135,49 @@ export const googleAuth = async (credential) => {
   }
 };
 
+export const githubAuth = async (code) => {
+  try {
+    const response = await fetch(`${API_URL}/auth/github`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code: code
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      if (response.status === 422 && data.detail) {
+        if (Array.isArray(data.detail)) {
+          const validationErrors = data.detail.map(error => {
+            if (error.loc && error.msg) {
+              const field = error.loc[error.loc.length - 1];
+              return `${field}: ${error.msg}`;
+            }
+            return error.msg || error.message || 'Validation error';
+          });
+          throw new Error(validationErrors.join(', '));
+        } else {
+          throw new Error(data.detail);
+        }
+      }
+      
+      throw new Error(data.detail || data.message || 'GitHub authentication failed');
+    }
+
+    return {
+      token: data.access_token,
+      user: data.user,
+    };
+  } catch (error) {
+    console.error('GitHub auth error:', error);
+    throw error;
+  }
+};
+
 export const getCurrentUser = async () => {
   const token = localStorage.getItem('token');
   if (!token) return null;

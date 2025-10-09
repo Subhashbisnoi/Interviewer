@@ -18,6 +18,22 @@ class User(Base):
     
     # Relationships
     interviews = relationship("InterviewSession", back_populates="user")
+    otps = relationship("OTP", back_populates="user")
+
+class OTP(Base):
+    __tablename__ = "otps"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    email = Column(String, index=True, nullable=False)
+    otp_code = Column(String, nullable=False)
+    purpose = Column(String, default="password_reset")  # password_reset, email_verification, etc.
+    is_used = Column(Boolean, default=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="otps")
 
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"
@@ -31,6 +47,7 @@ class InterviewSession(Base):
     status = Column(String, default="active")  # active, completed, archived
     total_score = Column(Float, default=0.0)
     average_score = Column(Float, default=0.0)
+    is_pinned = Column(Boolean, default=False)  # For pinned results
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
@@ -139,4 +156,21 @@ class InterviewSessionResponse(BaseModel):
     current_question: int
     total_score: float
     average_score: float
+    is_pinned: bool = False
     created_at: datetime
+
+# OTP related models
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., description="Email address to send OTP")
+
+class VerifyOTPRequest(BaseModel):
+    email: str = Field(..., description="Email address")
+    otp_code: str = Field(..., min_length=6, max_length=6, description="6-digit OTP code")
+
+class ResetPasswordRequest(BaseModel):
+    email: str = Field(..., description="Email address")
+    otp_code: str = Field(..., min_length=6, max_length=6, description="6-digit OTP code")
+    new_password: str = Field(..., min_length=6, description="New password")
+
+class MessageResponse(BaseModel):
+    message: str

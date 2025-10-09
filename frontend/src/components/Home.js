@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, Brain, User, BarChart3, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import AuthRequiredModal from './auth/AuthRequiredModal';
+import AuthModal from './auth/AuthModal';
 
 const Home = ({ onStartInterview }) => {
   const navigate = useNavigate();
@@ -155,12 +155,21 @@ const Home = ({ onStartInterview }) => {
     }
   };
 
-  const handleLoginSuccess = () => {
-    if (formDataToSubmit) {
-      startInterview(formDataToSubmit);
-    }
+  const handleAuthSuccess = () => {
     setShowAuthModal(false);
+    if (formDataToSubmit) {
+      // Start the interview after successful authentication
+      startInterview(formDataToSubmit);
+      setFormDataToSubmit(null);
+    }
   };
+
+  // Close modal when user becomes authenticated
+  React.useEffect(() => {
+    if (user && showAuthModal) {
+      handleAuthSuccess();
+    }
+  }, [user, showAuthModal]);
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -287,31 +296,13 @@ const Home = ({ onStartInterview }) => {
         </div>
       </div>
 
-      <AuthRequiredModal
+      <AuthModal
         isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onLogin={() => {
+        onClose={() => {
           setShowAuthModal(false);
-          navigate('/login', { 
-            state: { 
-              from: { 
-                pathname: '/',
-                state: { formData: formDataToSubmit }
-              } 
-            } 
-          });
+          setFormDataToSubmit(null);
         }}
-        onSignup={() => {
-          setShowAuthModal(false);
-          navigate('/signup', { 
-            state: { 
-              from: { 
-                pathname: '/',
-                state: { formData: formDataToSubmit }
-              } 
-            } 
-          });
-        }}
+        initialMode="login"
       />
     </div>
   );

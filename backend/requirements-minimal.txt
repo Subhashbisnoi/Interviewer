@@ -1,15 +1,12 @@
+# Minimal requirements for basic functionality
 fastapi
 uvicorn[standard]
-python-multipart
-python-dotenv
-pydantic[email]
 sqlalchemy
 alembic
 psycopg2-binary
 python-jose[cryptography]
 passlib[bcrypt]
+pydantic[email]
+python-dotenv
+python-multipart
 httpx
-pdfplumber
-openai
-langchain-openai
-langchain-core

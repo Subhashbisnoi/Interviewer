@@ -2,7 +2,7 @@ import os
 import sys
 import uuid
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -39,21 +39,28 @@ origins = []
 if os.getenv("ALLOWED_ORIGINS"):
     origins = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS").split(",")]
 else:
-    # Default origins for development
+    # Default origins for development and production
     origins = [
         "http://localhost:3000",
         "http://localhost:3015",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3015",
+        "https://interviewer-tan.vercel.app",
+        "https://*.vercel.app",  # Allow all Vercel subdomains
     ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins if origins else ["*"],  # Allow all if no specific origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Handle preflight OPTIONS requests
+@app.options("/{full_path:path}")
+async def options_handler(request: Request, response: Response):
+    return Response(status_code=200)
 
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])

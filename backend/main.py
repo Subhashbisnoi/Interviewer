@@ -46,13 +46,14 @@ else:
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3015",
         "https://interviewer-tan.vercel.app",
-        "https://*.vercel.app",  # Allow all Vercel subdomains
+        "https://interviewer-tan.vercel.app/",  # With trailing slash
+        "https://interviewer.vercel.app",  # Alternative domain if you change it
     ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins else ["*"],  # Allow all if no specific origins
-    allow_credentials=True,
+    allow_origins=["*"],  # Temporarily allow all origins for testing
+    allow_credentials=False,  # Must be False when allow_origins is ["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )

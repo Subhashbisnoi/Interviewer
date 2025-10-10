@@ -250,7 +250,13 @@ def verify_google_token(credential: str) -> dict:
     if not GOOGLE_AUTH_AVAILABLE:
         raise HTTPException(
             status_code=501, 
-            detail="Google OAuth is not configured for this deployment"
+            detail="Google OAuth libraries are not installed"
+        )
+    
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=501, 
+            detail="Google OAuth is not configured - GOOGLE_CLIENT_ID environment variable is missing"
         )
         
     try:
@@ -353,7 +359,13 @@ async def google_auth(
     if not GOOGLE_AUTH_AVAILABLE:
         raise HTTPException(
             status_code=501, 
-            detail="Google OAuth is not configured for this deployment"
+            detail="Google OAuth libraries are not installed"
+        )
+    
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=501, 
+            detail="Google OAuth is not configured - GOOGLE_CLIENT_ID environment variable is missing"
         )
         
     try:

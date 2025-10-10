@@ -59,12 +59,8 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# Password hashing - use explicit bcrypt configuration
-pwd_context = CryptContext(
-    schemes=["bcrypt"], 
-    deprecated="auto",
-    bcrypt__rounds=12  # Explicit rounds configuration
-)
+# Password hashing - use default bcrypt configuration
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Pydantic models
@@ -83,19 +79,22 @@ def get_password_hash(password: str) -> str:
     # Debug: print password info
     print(f"Hashing password: '{password}', length: {len(password)}, bytes: {len(password.encode('utf-8'))}")
     
-    # Bcrypt has a 72-byte limit, truncate if necessary
-    if isinstance(password, str):
-        password_bytes = password.encode('utf-8')
-        if len(password_bytes) > 72:
-            password = password_bytes[:72].decode('utf-8', errors='ignore')
-            print(f"Truncated password to: '{password}'")
-    
     try:
+        # Simple password hashing without truncation
         result = pwd_context.hash(password)
         print(f"Successfully hashed password")
         return result
     except Exception as e:
         print(f"Error hashing password: {e}")
+        # If bcrypt fails due to length, try a simple workaround
+        if "72 bytes" in str(e) and len(password) <= 72:
+            # This shouldn't happen, but if it does, try with explicit encoding
+            try:
+                result = pwd_context.hash(password.encode('utf-8').decode('utf-8'))
+                print(f"Successfully hashed password with encoding workaround")
+                return result
+            except Exception as e2:
+                print(f"Encoding workaround also failed: {e2}")
         raise
 
 def get_user(db: Session, email: str) -> Optional[User]:

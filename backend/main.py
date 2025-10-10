@@ -101,6 +101,33 @@ async def health_check():
         "version": "1.0.0"
     }
 
+@app.get("/debug/db")
+async def debug_database():
+    """Debug database connectivity."""
+    try:
+        from database import get_db
+        from models import User
+        from sqlalchemy.orm import Session
+        
+        # Test database connection
+        db_gen = get_db()
+        db: Session = next(db_gen)
+        
+        # Try to query users table (should work even if empty)
+        user_count = db.query(User).count()
+        
+        return {
+            "status": "success",
+            "message": "Database connected successfully",
+            "user_count": user_count
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": f"Database connection failed: {str(e)}",
+            "error_type": type(e).__name__
+        }
+
 # Temporary basic routes for testing
 @app.get("/api/test")
 async def test_endpoint():

@@ -59,8 +59,12 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - use explicit bcrypt configuration
+pwd_context = CryptContext(
+    schemes=["bcrypt"], 
+    deprecated="auto",
+    bcrypt__rounds=12  # Explicit rounds configuration
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Pydantic models
@@ -76,7 +80,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    # Debug: print password info
+    print(f"Hashing password: '{password}', length: {len(password)}, bytes: {len(password.encode('utf-8'))}")
+    
+    # Bcrypt has a 72-byte limit, truncate if necessary
+    if isinstance(password, str):
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password = password_bytes[:72].decode('utf-8', errors='ignore')
+            print(f"Truncated password to: '{password}'")
+    
+    try:
+        result = pwd_context.hash(password)
+        print(f"Successfully hashed password")
+        return result
+    except Exception as e:
+        print(f"Error hashing password: {e}")
+        raise
 
 def get_user(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
@@ -165,6 +185,13 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     Create a new user account
     """
     try:
+        # Validate password length
+        if len(user_data.password.encode('utf-8')) > 72:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is too long. Please use a shorter password."
+            )
+            
         # Create new user using the helper function
         db_user = create_user(db, user_data)
         

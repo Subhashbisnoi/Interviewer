@@ -9,12 +9,14 @@
 - **API Docs**: `/docs` ✅
 - **Authentication**: `/auth/*` ⚠️ (minor bcrypt warning, but functional)
 
-## 🔄 Frontend - Ready for Vercel Deployment
+## ✅ Frontend - DEPLOYED AND WORKING
+**URL**: https://interviewer-tan.vercel.app
 
-### Pre-deployment Setup:
-- ✅ Backend URL configured
-- ✅ Build process tested and working
-- ✅ Environment variables set
+### Current Status:
+- ✅ Successfully deployed to Vercel
+- ✅ CORS issues resolved - frontend communicates with backend
+- ✅ API calls working properly
+- ⚠️ OAuth needs environment variables on backend
 
 ## 📋 Next Steps for Frontend Deployment on Vercel:
 
@@ -32,8 +34,8 @@
 In Vercel project settings, add these environment variables:
 ```env
 REACT_APP_API_URL=https://ai-interviewer-backend-mfp3.onrender.com
-REACT_APP_GOOGLE_CLIENT_ID=300902081457-9kfrv1j0o87gqvm9o7bdn05cp5f817ee.apps.googleusercontent.com
-REACT_APP_GITHUB_CLIENT_ID=Ov23linVT3SJaDQZMprY
+REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id
+REACT_APP_GITHUB_CLIENT_ID=your_github_client_id
 NODE_ENV=production
 ```
 
@@ -53,6 +55,20 @@ After getting Vercel URL, update OAuth app settings:
 **Google OAuth:**
 - Authorized origins: Add `https://your-vercel-url.vercel.app`
 - Authorized redirect URIs: Add `https://your-vercel-url.vercel.app`
+
+## 🔧 OAuth Configuration (Next Step)
+
+To enable OAuth functionality, add these environment variables to Render:
+
+1. Go to [Render Dashboard](https://dashboard.render.com) → ai-interviewer-backend → Environment Variables
+2. Add these variables (use the actual values from your OAuth app configurations):
+   ```
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   GITHUB_CLIENT_ID=your_github_client_id
+   GITHUB_CLIENT_SECRET=your_github_client_secret
+   ```
+3. Save and redeploy - OAuth endpoints will start working!
 
 ## 🎯 Current Architecture
 

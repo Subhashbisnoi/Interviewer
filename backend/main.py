@@ -52,11 +52,27 @@ else:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporarily allow all origins for testing
-    allow_credentials=False,  # Must be False when allow_origins is ["*"]
-    allow_methods=["*"],
+    allow_origins=origins,  # Use specific origins for security
+    allow_credentials=True,  # Enable credentials for OAuth
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Add security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Add security headers that won't interfere with OAuth
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    # Don't add COOP/COEP headers that might break OAuth
+    # These can interfere with OAuth popups and redirects
+    
+    return response
 
 # Handle preflight OPTIONS requests
 @app.options("/{full_path:path}")

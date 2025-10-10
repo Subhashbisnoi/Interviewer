@@ -107,14 +107,11 @@ def create_user(db: Session, user_data: UserCreate) -> User:
         return db_user
     except Exception as e:
         db.rollback()
+        print(f"Database error creating user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create user"
+            detail=f"Failed to create user: {str(e)}"
         )
-    user = get_user(db, email)
-    if not user or not verify_password(password, user.hashed_password):
-        return None
-    return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -192,9 +189,12 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         # Handle any other unexpected errors
+        print(f"Signup error: {str(e)}")  # Add logging
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during signup"
+            detail=f"An error occurred during signup: {str(e)}"
         )
 
 @router.post("/login", response_model=Token)
@@ -240,9 +240,12 @@ async def login(
         raise
     except Exception as e:
         # Handle any other unexpected errors
+        print(f"Login error: {str(e)}")  # Add logging
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during login"
+            detail=f"An error occurred during login: {str(e)}"
         )
 
 def verify_google_token(credential: str) -> dict:

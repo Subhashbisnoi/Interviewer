@@ -7,7 +7,8 @@ import secrets
 import random
 import string
 from sqlalchemy.orm import Session
-from passlib.hash import sha256_crypt  # Direct import
+from passlib.hash import sha256_crypt, bcrypt  # Support both
+from passlib.context import CryptContext  # Re-add for flexibility
 import os
 import sys
 from dotenv import load_dotenv
@@ -59,7 +60,12 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# No need for CryptContext - use sha256_crypt directly
+# Multi-scheme password context - support both old (bcrypt) and new (sha256_crypt) passwords
+# This allows gradual migration without breaking existing accounts
+pwd_context = CryptContext(
+    schemes=["sha256_crypt", "bcrypt"],  # sha256_crypt for new, bcrypt for old
+    deprecated="auto"  # Automatically mark bcrypt as deprecated
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Pydantic models
@@ -72,19 +78,32 @@ class GitHubCredential(BaseModel):
 router = APIRouter()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return sha256_crypt.verify(plain_password, hashed_password)
+    """Verify a password against its hash - supports both bcrypt and sha256_crypt"""
+    try:
+        # CryptContext will auto-detect which scheme was used
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        print(f"Password verification error: {e}")
+        return False
 
 def get_password_hash(password: str) -> str:
-    """Hash a password using sha256_crypt"""
+    """Hash a password using sha256_crypt (default scheme)"""
     try:
-        result = sha256_crypt.hash(password)
+        # Truncate password to 72 bytes for bcrypt compatibility if needed
+        # sha256_crypt doesn't have this limit, but we keep it for consistency
+        if len(password.encode('utf-8')) > 72:
+            password = password[:72]
+        
+        # Use sha256_crypt for all new passwords
+        result = pwd_context.hash(password)
         return result
     except Exception as e:
         print(f"Error hashing password: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Password hashing failed"
+            detail=f"Password hashing failed: {str(e)}"
         )
 
 def get_user(db: Session, email: str) -> Optional[User]:
@@ -133,9 +152,28 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
+    """Authenticate user and auto-upgrade deprecated password hashes"""
     user = get_user(db, email)
-    if not user or not verify_password(password, user.hashed_password):
+    if not user:
         return None
+    
+    # Verify password
+    if not verify_password(password, user.hashed_password):
+        return None
+    
+    # Check if password needs rehashing (bcrypt -> sha256_crypt migration)
+    if pwd_context.needs_update(user.hashed_password):
+        print(f"Auto-upgrading password hash for user: {email}")
+        try:
+            # Rehash with new algorithm
+            user.hashed_password = get_password_hash(password)
+            db.commit()
+            print(f"Successfully upgraded password hash for user: {email}")
+        except Exception as e:
+            print(f"Failed to upgrade password hash: {e}")
+            db.rollback()
+            # Don't fail authentication if rehashing fails
+    
     return user
 
 async def get_current_user(

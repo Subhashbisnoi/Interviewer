@@ -5,7 +5,8 @@ sqlalchemy
 alembic
 psycopg2-binary
 python-jose[cryptography]
-passlib  # Just passlib without extras
+passlib
+bcrypt  # Keep bcrypt for backward compatibility with existing passwords
 pydantic[email]
 python-dotenv
 python-multipart

@@ -59,8 +59,8 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# Password hashing - use default bcrypt configuration
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - use argon2 for better security and no length limits
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Pydantic models
@@ -76,26 +76,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    # Debug: print password info
-    print(f"Hashing password: '{password}', length: {len(password)}, bytes: {len(password.encode('utf-8'))}")
-    
+    # Argon2 doesn't have the 72-byte limitation like bcrypt
     try:
-        # Simple password hashing without truncation
         result = pwd_context.hash(password)
-        print(f"Successfully hashed password")
         return result
     except Exception as e:
         print(f"Error hashing password: {e}")
-        # If bcrypt fails due to length, try a simple workaround
-        if "72 bytes" in str(e) and len(password) <= 72:
-            # This shouldn't happen, but if it does, try with explicit encoding
-            try:
-                result = pwd_context.hash(password.encode('utf-8').decode('utf-8'))
-                print(f"Successfully hashed password with encoding workaround")
-                return result
-            except Exception as e2:
-                print(f"Encoding workaround also failed: {e2}")
-        raise
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password hashing failed"
+        )
 
 def get_user(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
@@ -184,17 +174,16 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     Create a new user account
     """
     try:
-        # Validate password length
-        if len(user_data.password.encode('utf-8')) > 72:
+        # Argon2 doesn't have length limitations like bcrypt
+        # Just basic validation for reasonable password length
+        if len(user_data.password) < 6:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password is too long. Please use a shorter password."
+                detail="Password must be at least 6 characters long."
             )
-            
+
         # Create new user using the helper function
-        db_user = create_user(db, user_data)
-        
-        # Create access token
+        db_user = create_user(db, user_data)        # Create access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user_data.email}, expires_delta=access_token_expires

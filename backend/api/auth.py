@@ -59,8 +59,18 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# Password hashing - use argon2 for better security and no length limits
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+# Password hashing - try argon2 first, fallback to pbkdf2_sha256
+try:
+    pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+    print("Using argon2 for password hashing")
+except:
+    try:
+        pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+        print("Using pbkdf2_sha256 for password hashing")
+    except:
+        # Ultimate fallback - use sha256_crypt (always available)
+        pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
+        print("Using sha256_crypt for password hashing")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Pydantic models

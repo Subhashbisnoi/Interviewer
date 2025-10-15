@@ -7,7 +7,7 @@ import secrets
 import random
 import string
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+from passlib.hash import sha256_crypt  # Direct import
 import os
 import sys
 from dotenv import load_dotenv
@@ -59,18 +59,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# Password hashing - try argon2 first, fallback to pbkdf2_sha256
-try:
-    pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-    print("Using argon2 for password hashing")
-except:
-    try:
-        pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-        print("Using pbkdf2_sha256 for password hashing")
-    except:
-        # Ultimate fallback - use sha256_crypt (always available)
-        pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
-        print("Using sha256_crypt for password hashing")
+# No need for CryptContext - use sha256_crypt directly
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Pydantic models
@@ -83,12 +72,13 @@ class GitHubCredential(BaseModel):
 router = APIRouter()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its hash"""
+    return sha256_crypt.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    # Argon2 doesn't have the 72-byte limitation like bcrypt
+    """Hash a password using sha256_crypt"""
     try:
-        result = pwd_context.hash(password)
+        result = sha256_crypt.hash(password)
         return result
     except Exception as e:
         print(f"Error hashing password: {e}")

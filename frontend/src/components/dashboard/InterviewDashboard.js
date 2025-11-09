@@ -50,6 +50,170 @@ const InterviewDashboard = () => {
     }
   };
 
+  const renderPerformanceTrend = () => {
+    console.log('renderPerformanceTrend - Total sessions:', sessions.length);
+    console.log('renderPerformanceTrend - Sessions data:', sessions);
+    
+    // Get completed sessions with scores, sorted by date
+    const completedSessions = sessions
+      .filter(session => {
+        const hasScore = session.score != null && session.score > 0;
+        const isCompleted = session.status === 'completed';
+        console.log(`Session ${session.thread_id}: status=${session.status}, score=${session.score}, hasScore=${hasScore}, isCompleted=${isCompleted}, role=${session.role}, company=${session.company}`);
+        return isCompleted && hasScore;
+      })
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      .slice(-10); // Show last 10 sessions
+
+    console.log('renderPerformanceTrend - Completed sessions with scores:', completedSessions.length, completedSessions);
+    console.log('renderPerformanceTrend - Need to complete interviews to see chart!');
+
+    if (completedSessions.length === 0) {
+      console.log('renderPerformanceTrend - No completed sessions, showing placeholder');
+      return (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Trend</h3>
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-lg p-12 text-center border-2 border-dashed border-gray-300 dark:border-gray-600" style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div>
+              <svg className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <p className="text-gray-700 dark:text-gray-300 font-semibold text-lg mb-2">No Performance Data Yet</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">You have {sessions.length} interview{sessions.length !== 1 ? 's' : ''} in progress</p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-medium">
+                  Complete an interview to see your performance trend
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Calculate chart dimensions and data
+    const maxScore = 10;
+    const chartHeight = 300;
+    const svgWidth = 1000;
+    const padding = { top: 30, right: 30, bottom: 50, left: 60 };
+    const chartWidth = svgWidth - padding.left - padding.right;
+    const innerHeight = chartHeight - padding.top - padding.bottom;
+    
+    const dataPoints = completedSessions.map((session, index) => {
+      const x = padding.left + (index / (completedSessions.length - 1)) * chartWidth;
+      const y = padding.top + (1 - (session.score / maxScore)) * innerHeight;
+      return { x, y, score: session.score, index: index + 1 };
+    });
+
+    console.log('renderPerformanceTrend - Data points:', dataPoints);
+
+    // Create SVG path for the line
+    const pathData = dataPoints
+      .map((point, index) => {
+        const command = index === 0 ? 'M' : 'L';
+        return `${command} ${point.x} ${point.y}`;
+      })
+      .join(' ');
+
+    // Create area fill path
+    const areaPathData = `${pathData} L ${dataPoints[dataPoints.length - 1].x} ${chartHeight - padding.bottom} L ${padding.left} ${chartHeight - padding.bottom} Z`;
+
+    return (
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Trend</h3>
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-lg p-6 relative" style={{ height: '300px' }}>
+          <svg className="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
+            {/* Grid lines */}
+            {[0, 2.5, 5, 7.5, 10].map((score) => {
+              const y = padding.top + (1 - (score / maxScore)) * (chartHeight - padding.top - padding.bottom);
+              return (
+                <g key={`grid-${score}`}>
+                  <line
+                    x1={padding.left}
+                    y1={y}
+                    x2={1000 - padding.right}
+                    y2={y}
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    className="text-gray-300 dark:text-gray-600"
+                    strokeDasharray="5,5"
+                  />
+                  <text
+                    x={padding.left - 10}
+                    y={y + 5}
+                    fontSize="12"
+                    textAnchor="end"
+                    className="fill-gray-500 dark:fill-gray-400"
+                  >
+                    {score}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Area fill */}
+            <path
+              d={areaPathData}
+              fill="url(#gradient)"
+              opacity="0.2"
+            />
+
+            {/* Line */}
+            <path
+              d={pathData}
+              fill="none"
+              stroke="url(#lineGradient)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Data points */}
+            {dataPoints.map((point, index) => (
+              <g key={`point-${index}`}>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r="6"
+                  className="fill-blue-500 dark:fill-blue-400"
+                  stroke="white"
+                  strokeWidth="2"
+                />
+                {/* Score labels on hover */}
+                <title>{`Interview #${completedSessions.length - index}: ${point.score.toFixed(1)}/10`}</title>
+                {/* Labels */}
+                <text
+                  x={point.x}
+                  y={chartHeight - 5}
+                  fontSize="11"
+                  textAnchor="middle"
+                  className="fill-gray-600 dark:fill-gray-400"
+                >
+                  #{completedSessions.length - index}
+                </text>
+              </g>
+            ))}
+
+            {/* Gradients */}
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
+              </linearGradient>
+              <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#8b5cf6" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+          Showing your last {completedSessions.length} completed interview{completedSessions.length !== 1 ? 's' : ''}
+        </div>
+      </div>
+    );
+  };
+
   const handleViewSession = async (session) => {
     setSelectedSession(session);
     setSidebarOpen(true);
@@ -104,44 +268,47 @@ const InterviewDashboard = () => {
     
     if (!analytics || analytics.total_interviews === 0) {
       return (
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Analytics</h2>
-          <p className="text-gray-500">No completed interviews yet. Start your first interview to see analytics!</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Analytics</h2>
+          <p className="text-gray-500 dark:text-gray-400">No completed interviews yet. Start your first interview to see analytics!</p>
         </div>
       );
     }
 
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Your Performance Analytics</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Your Performance Analytics</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-600">Total Interviews</h3>
-            <p className="text-2xl font-bold text-blue-900">{analytics.total_interviews}</p>
+          <div className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-600 dark:text-blue-300">Total Interviews</h3>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{analytics.total_interviews}</p>
           </div>
           
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-green-600">Average Score</h3>
-            <p className="text-2xl font-bold text-green-900">
+          <div className="bg-green-50 dark:bg-green-900 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-green-600 dark:text-green-300">Average Score</h3>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
               {analytics.average_score ? analytics.average_score.toFixed(1) : 'N/A'}/10
             </p>
           </div>
           
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h3 className="text-sm font-medium text-purple-600">Best Performance</h3>
-            <p className="text-2xl font-bold text-purple-900">
+          <div className="bg-purple-50 dark:bg-purple-900 p-4 rounded-lg">
+            <h3 className="text-sm font-medium text-purple-600 dark:text-purple-300">Best Performance</h3>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
               {analytics.best_score ? analytics.best_score.toFixed(1) : 'N/A'}/10
             </p>
           </div>
         </div>
 
+        {/* Performance Trend Chart */}
+        {renderPerformanceTrend()}
+
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Companies Interviewed</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Companies Interviewed</h4>
             <div className="flex flex-wrap gap-2">
               {(analytics.companies || []).map((company, index) => (
-                <span key={`company-${index}-${company}`} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-sm">
+                <span key={`company-${index}-${company}`} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
                   {company}
                 </span>
               ))}
@@ -149,10 +316,10 @@ const InterviewDashboard = () => {
           </div>
           
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Roles Interviewed</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles Interviewed</h4>
             <div className="flex flex-wrap gap-2">
               {(analytics.roles || []).map((role, index) => (
-                <span key={`role-${index}-${role}`} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-sm">
+                <span key={`role-${index}-${role}`} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
                   {role}
                 </span>
               ))}

@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, ArrowRight, Brain, Volume2, Mic, Square, Play, RotateCcw } from 'lucide-react';
+import { Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import RoboInterviewer from './interview/RoboInterviewer';
 import VoiceRecorder from './VoiceRecorder';
 
 const Interview = ({ interviewData, onSessionCreated }) => {
@@ -9,8 +10,9 @@ const Interview = ({ interviewData, onSessionCreated }) => {
   const [answers, setAnswers] = useState(Array(interviewData.questions?.length).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef(null);
+  const [transcribedAnswer, setTranscribedAnswer] = useState('');
+  const videoMeetingRef = useRef(null);
+  const roboInterviewerRef = useRef(null);
 
   const questions = interviewData.questions || [];
 
@@ -18,6 +20,7 @@ const Interview = ({ interviewData, onSessionCreated }) => {
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = value;
     setAnswers(newAnswers);
+    setTranscribedAnswer(value);
   };
 
   const handleVoiceRecordingComplete = (transcribedText) => {
@@ -27,30 +30,9 @@ const Interview = ({ interviewData, onSessionCreated }) => {
   const handleRecordingError = (error) => {
     setError(error);
   };
-  
-  const replayQuestion = () => {
-    if (questions.length > 0 && currentQuestion < questions.length) {
-      const utterance = new SpeechSynthesisUtterance(questions[currentQuestion]);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    }
-  };
-
-  const previousQuestion = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
-  };
 
   const submitInterview = async () => {
-    if (answers.some(answer => !answer.trim())) {
+    if (answers.some(answer => !answer?.trim())) {
       setError('Please answer all questions before submitting');
       return;
     }
@@ -59,7 +41,6 @@ const Interview = ({ interviewData, onSessionCreated }) => {
     setError('');
 
     try {
-      // Get auth token
       const token = localStorage.getItem('token');
       const headers = {
         'Content-Type': 'application/json',
@@ -83,16 +64,15 @@ const Interview = ({ interviewData, onSessionCreated }) => {
 
       const result = await response.json();
       
-      // Pass the complete session data to parent
       onSessionCreated({
         ...interviewData,
-        thread_id: interviewData.session_id, // Add thread_id for pin functionality
+        thread_id: interviewData.session_id,
         answers: answers,
         feedback: result.feedback,
         roadmap: result.roadmap,
         total_score: result.total_score,
         average_score: result.average_score,
-        is_pinned: false // Default to not pinned
+        is_pinned: false
       });
 
       navigate('/results');
@@ -103,314 +83,235 @@ const Interview = ({ interviewData, onSessionCreated }) => {
     }
   };
 
-  const getProgressPercentage = () => {
-    return ((currentQuestion + 1) / questions.length) * 100;
-  };
-
-  const getQuestionNumber = (index) => {
-    return index + 1;
-  };
-
-  const playQuestionAudio = async (questionText) => {
-    try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-
-      setIsPlaying(true);
-      
-      // Create a new audio element
-      const audio = new Audio();
-      audioRef.current = audio;
-      
-      // Set up event listeners
-      audio.onended = () => {
-        setIsPlaying(false);
-        audioRef.current = null;
-      };
-      
-      audio.onerror = () => {
-        setIsPlaying(false);
-        console.error('Error playing audio');
-      };
-      
-      // Call the TTS API
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/api/tts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: questionText,
-          language: 'en'
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate speech');
-      }
-      
-      // Create a blob URL from the response
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      // Set the audio source and play
-      audio.src = audioUrl;
-      await audio.play();
-      
-    } catch (err) {
-      console.error('Error playing question:', err);
-      setIsPlaying(false);
-    }
-  };
-  
-  // Auto-speak question when it changes
-  useEffect(() => {
-    if (questions.length > 0 && currentQuestion < questions.length) {
-      const speakQuestion = async () => {
-        try {
-          // Cancel any ongoing speech
-          window.speechSynthesis.cancel();
-          
-          const utterance = new SpeechSynthesisUtterance(questions[currentQuestion]);
-          utterance.rate = 1.0;
-          utterance.pitch = 1.0;
-          
-          // Set playing state
-          setIsPlaying(true);
-          utterance.onend = () => setIsPlaying(false);
-          
-          window.speechSynthesis.speak(utterance);
-        } catch (err) {
-          console.error('Error speaking question:', err);
-          setIsPlaying(false);
-        }
-      };
-      
-      // Small delay to ensure the UI has updated
-      const timer = setTimeout(speakQuestion, 500);
-      
-      // Cleanup function
-      return () => {
-        clearTimeout(timer);
-        window.speechSynthesis.cancel();
-        setIsPlaying(false);
-      };
-    }
-  }, [currentQuestion, questions]);
-
-  // Clean up audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-    };
-  }, []);
-
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">AI Interview</h1>
-            <p className="text-gray-600">
-              {interviewData.role} at {interviewData.company}
-            </p>
-          </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Clock className="h-4 w-4" />
-            <span>Question {currentQuestion + 1} of {questions.length}</span>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${getProgressPercentage()}%` }}
-          ></div>
-        </div>
-      </div>
-
-      {/* Question Card */}
-      <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-        <div className="mb-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="bg-primary-100 rounded-full p-2">
-              <Brain className="h-6 w-6 text-primary-600" />
+    <div className="min-h-screen bg-gray-900 flex flex-col fixed inset-0 z-50">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="bg-gray-800 px-6 py-3 flex items-center justify-between border-b border-gray-700 flex-shrink-0">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
             </div>
-            <span className="text-sm font-medium text-primary-600">
-              Question {getQuestionNumber(currentQuestion)}
-            </span>
+            <div>
+              <h1 className="text-white font-semibold">AI Interview</h1>
+              <p className="text-gray-400 text-sm">
+                {interviewData.role} {interviewData.company && `at ${interviewData.company}`}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center">
-            <h2 className="text-xl font-semibold text-gray-900 leading-relaxed flex-1">
-              {questions[currentQuestion]}
-            </h2>
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-400 flex items-center space-x-2">
+              <Clock className="h-4 w-4" />
+              <span>Question {currentQuestion + 1} of {questions.length}</span>
+            </div>
             <button
-              onClick={() => playQuestionAudio(questions[currentQuestion])}
-              disabled={isPlaying}
-              className="ml-4 p-2 text-gray-500 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              aria-label="Play question audio"
+              onClick={() => {
+                if (window.confirm('Are you sure you want to end this interview?')) {
+                  navigate('/');
+                }
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
-              <Volume2 className={`h-6 w-6 ${isPlaying ? 'text-primary-600' : ''}`} />
+              End Interview
             </button>
           </div>
         </div>
 
-        {/* Answer Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Your Answer
-          </label>
-          <div className="space-y-6">
-            {/* Question replay button */}
-            <div className="flex justify-center">
-              <button
-                onClick={replayQuestion}
-                className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                title="Replay question"
-              >
-                <Play className="w-4 h-4 mr-2" />
-                Replay Question
-              </button>
+        <div className="flex-1 p-4 overflow-auto" ref={videoMeetingRef}>
+          <RoboInterviewer 
+            ref={roboInterviewerRef}
+            questionText={questions[currentQuestion]}
+            onRequestNextQuestion={() => {
+              if (currentQuestion < questions.length - 1) {
+                setCurrentQuestion(currentQuestion + 1);
+                setTranscribedAnswer('');
+              }
+            }}
+            isInterviewActive={!isSubmitting}
+          />
+        </div>
+
+        <div className="bg-gray-800 px-6 py-4 border-t border-gray-700 flex-shrink-0 overflow-y-auto max-h-96">
+          {error && (
+            <div className="mb-4 p-3 bg-red-900 border border-red-700 text-red-200 rounded-lg text-sm">
+              {error}
             </div>
-            
-            {/* Voice recording section */}
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Your Answer</h3>
-              <VoiceRecorder
-                key={`recorder-${currentQuestion}`}
-                questionIndex={currentQuestion}
-                onRecordingComplete={handleVoiceRecordingComplete}
-                onError={handleRecordingError}
-                buttonText={answers[currentQuestion] ? 'Re-record Answer' : 'Record Answer'}
-              />
-              
-              {/* Show transcribed answer */}
-              {answers[currentQuestion] && (
-                <div className="mt-4 p-3 bg-white border border-gray-200 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-2">Your transcribed answer:</p>
-                  <p className="text-gray-800">{answers[currentQuestion]}</p>
+          )}
+
+          <div className="space-y-4">
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  Q{currentQuestion + 1}
                 </div>
-              )}
+                <div className="flex-1">
+                  <p className="text-white">{questions[currentQuestion]}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    if (roboInterviewerRef.current) {
+                      roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
+                    }
+                  }}
+                  className="flex-shrink-0 text-gray-400 hover:text-white"
+                  title="Listen to question"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            
-            {/* Navigation buttons */}
-            <div className="flex justify-between pt-2">
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <h3 className="text-white text-sm font-medium mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Voice Answer
+                </h3>
+                <VoiceRecorder
+                  key={`recorder-${currentQuestion}`}
+                  questionIndex={currentQuestion}
+                  onRecordingComplete={handleVoiceRecordingComplete}
+                  onError={handleRecordingError}
+                  buttonText={answers[currentQuestion] ? 'Re-record Answer' : 'Record Answer'}
+                />
+                
+                {transcribedAnswer && (
+                  <div className="mt-3 p-3 bg-gray-600 rounded-lg">
+                    <p className="text-xs text-gray-300 mb-1">Transcribed:</p>
+                    <p className="text-sm text-white">{transcribedAnswer}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-700 p-4 rounded-lg flex flex-col">
+                <h3 className="text-white text-sm font-medium mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Type Answer (Optional)
+                </h3>
+                <textarea
+                  value={answers[currentQuestion]}
+                  onChange={(e) => handleAnswerChange(e.target.value)}
+                  placeholder="Or type your answer here..."
+                  className="flex-1 px-3 py-2 bg-gray-600 text-white border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 resize-none"
+                  rows="4"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
               <button
-                onClick={previousQuestion}
+                onClick={() => {
+                  if (currentQuestion > 0) {
+                    setCurrentQuestion(currentQuestion - 1);
+                    setTranscribedAnswer('');
+                  }
+                }}
                 disabled={currentQuestion === 0}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
+                className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
-                Previous
+                <ArrowRight className="h-4 w-4 rotate-180" />
+                <span>Previous</span>
               </button>
-              
+
+              <div className="flex-1 mx-4 flex items-center justify-center space-x-3">
+                {/* Meeting Controls */}
+                <button
+                  onClick={() => {
+                    if (roboInterviewerRef.current) {
+                      roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
+                    }
+                  }}
+                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
+                  title="Replay question"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (roboInterviewerRef.current) {
+                      roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
+                    }
+                  }}
+                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                >
+                  Ask Question
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (currentQuestion < questions.length - 1) {
+                      setCurrentQuestion(currentQuestion + 1);
+                      setTranscribedAnswer('');
+                    }
+                  }}
+                  disabled={currentQuestion >= questions.length - 1}
+                  className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                >
+                  <span>Next</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to end this interview?')) {
+                      navigate('/');
+                    }
+                  }}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  End Call
+                </button>
+              </div>
+
               {currentQuestion < questions.length - 1 ? (
                 <button
-                  onClick={nextQuestion}
-                  disabled={!answers[currentQuestion]}
-                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  onClick={() => {
+                    if (currentQuestion < questions.length - 1) {
+                      setCurrentQuestion(currentQuestion + 1);
+                      setTranscribedAnswer('');
+                    }
+                  }}
+                  disabled={!answers[currentQuestion]?.trim()}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
                 >
-                  Next Question <ArrowRight className="ml-2 w-4 h-4" />
+                  <span>Submit & Next</span>
+                  <ArrowRight className="h-4 w-4" />
                 </button>
               ) : (
                 <button
                   onClick={submitInterview}
-                  disabled={!answers[currentQuestion] || isSubmitting}
-                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                  disabled={isSubmitting || answers.some(answer => !answer?.trim())}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit Interview'}
-                  {!isSubmitting && <CheckCircle className="ml-2 w-4 h-4" />}
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Submit Interview</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
           </div>
         </div>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={previousQuestion}
-            disabled={currentQuestion === 0}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            <span>Previous</span>
-          </button>
-
-          <div className="flex items-center space-x-4">
-            {currentQuestion < questions.length - 1 ? (
-              <button
-                onClick={nextQuestion}
-                disabled={!answers[currentQuestion].trim()}
-                className="flex items-center space-x-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <span>Next</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            ) : (
-              <button
-                onClick={submitInterview}
-                disabled={isSubmitting || answers.some(answer => !answer.trim())}
-                className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Submitting...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Submit Interview</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
       </div>
-
-      {/* Question Navigation */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Question Navigation</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {questions.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentQuestion(index)}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                index === currentQuestion
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : answers[index].trim()
-                  ? 'border-green-300 bg-green-50 text-green-700'
-                  : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-center">
-                <div className="text-lg font-semibold">{index + 1}</div>
-                <div className="text-xs">
-                  {answers[index].trim() ? 'Answered' : 'Pending'}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="fixed bottom-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
     </div>
   );
 };

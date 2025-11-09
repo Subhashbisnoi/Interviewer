@@ -1,26 +1,52 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login as loginApi, signup as signupApi, googleAuth as googleAuthApi, githubAuth as githubAuthApi, getCurrentUser } from '../services/auth';
+import { apiClient } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionWarning, setSessionWarning] = useState(false);
   const navigate = useNavigate();
 
+  // Token expiration check (30 minutes = 1800000 ms)
+  const TOKEN_LIFETIME = 30 * 60 * 1000; // 30 minutes
+  const WARNING_BEFORE_EXPIRY = 5 * 60 * 1000; // Show warning 5 minutes before expiry
+
   useEffect(() => {
+    // Set up unauthorized handler for API client
+    apiClient.setUnauthorizedHandler(() => {
+      handleSessionExpired();
+    });
+
     // Check for existing session on initial load
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (token) {
+        const loginTime = localStorage.getItem('loginTime');
+        
+        if (token && loginTime) {
+          const timeElapsed = Date.now() - parseInt(loginTime);
+          
+          // If token is expired, logout
+          if (timeElapsed >= TOKEN_LIFETIME) {
+            handleSessionExpired();
+            return;
+          }
+          
+          // Try to get current user
           const userData = await getCurrentUser();
           setUser(userData);
+          
+          // Set up warning timer
+          setupSessionWarning(timeElapsed);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('token');
+        localStorage.removeItem('loginTime');
       } finally {
         setLoading(false);
       }
@@ -29,11 +55,54 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  const setupSessionWarning = (timeElapsed) => {
+    const timeUntilWarning = TOKEN_LIFETIME - WARNING_BEFORE_EXPIRY - timeElapsed;
+    
+    if (timeUntilWarning > 0) {
+      setTimeout(() => {
+        setSessionWarning(true);
+      }, timeUntilWarning);
+    }
+    
+    // Auto logout after token expires
+    const timeUntilExpiry = TOKEN_LIFETIME - timeElapsed;
+    if (timeUntilExpiry > 0) {
+      setTimeout(() => {
+        handleSessionExpired();
+      }, timeUntilExpiry);
+    }
+  };
+
+  const handleSessionExpired = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('loginTime');
+    setUser(null);
+    setSessionWarning(false);
+    navigate('/', { replace: true });
+  };
+
+  const extendSession = async () => {
+    // Re-validate token and extend session
+    try {
+      const userData = await getCurrentUser();
+      if (userData) {
+        // Reset login time
+        localStorage.setItem('loginTime', Date.now().toString());
+        setSessionWarning(false);
+        setupSessionWarning(0);
+      }
+    } catch (error) {
+      handleSessionExpired();
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const { user: userData, token } = await loginApi(email, password);
       localStorage.setItem('token', token);
+      localStorage.setItem('loginTime', Date.now().toString());
       setUser(userData);
+      setupSessionWarning(0);
       // Don't navigate automatically - let components handle it
       return { success: true };
     } catch (error) {
@@ -49,7 +118,9 @@ export const AuthProvider = ({ children }) => {
       // The backend now returns token and user data directly on signup
       if (response.access_token && response.user) {
         localStorage.setItem('token', response.access_token);
+        localStorage.setItem('loginTime', Date.now().toString());
         setUser(response.user);
+        setupSessionWarning(0);
         // Don't navigate automatically - let components handle it
         return { success: true };
       }
@@ -65,7 +136,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const { user: userData, token } = await googleAuthApi(credential);
       localStorage.setItem('token', token);
+      localStorage.setItem('loginTime', Date.now().toString());
       setUser(userData);
+      setupSessionWarning(0);
       // Don't navigate automatically - let components handle it
       return { success: true };
     } catch (error) {
@@ -78,7 +151,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const { user: userData, token } = await githubAuthApi(code);
       localStorage.setItem('token', token);
+      localStorage.setItem('loginTime', Date.now().toString());
       setUser(userData);
+      setupSessionWarning(0);
       // Don't navigate automatically - let components handle it
       return { success: true };
     } catch (error) {
@@ -89,12 +164,25 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('loginTime');
     setUser(null);
+    setSessionWarning(false);
     navigate('/');
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, githubLogin, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      signup, 
+      googleLogin, 
+      githubLogin, 
+      logout,
+      sessionWarning,
+      extendSession,
+      dismissWarning: () => setSessionWarning(false)
+    }}>
       {!loading && children}
     </AuthContext.Provider>
   );

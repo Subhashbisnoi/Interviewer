@@ -6,6 +6,7 @@ from answer import answer_1st_question, answer_2nd_question, answer_3rd_question
 from feedback import feedback_generator
 from roadmap import generate_roadmap
 from generator import generate_question
+from company_detail_extractor import search_company_and_role
 from langchain_openai import ChatOpenAI
 from models import InterviewState, InterviewQuestions, StructuredEvaluator, FeedbackItem
 from common import generator_llm, feedback_llm
@@ -23,21 +24,21 @@ structured_generator = generator_llm.with_structured_output(InterviewQuestions)
 structured_evaluator = feedback_llm.with_structured_output(StructuredEvaluator)
 
 graph=StateGraph(InterviewState)
-#graph.add_node("company_details",company_details)
-graph.add_node("generate_question",generate_question)
+graph.add_node("search_company_and_role", search_company_and_role)
+graph.add_node("generate_question", generate_question)
 graph.add_node("answer_1st_question", answer_1st_question)
 graph.add_node("answer_2nd_question", answer_2nd_question)
 graph.add_node("answer_3rd_question", answer_3rd_question)
 graph.add_node("feedback_generator", feedback_generator)
 graph.add_node("generate_roadmap", generate_roadmap)
 
-#graph.add_edge(START, "company_details")
-#graph.add_edge("company_details", "generate_question")
-graph.add_edge(START, "generate_question")
+# Updated workflow with company research
+graph.add_edge(START, "search_company_and_role")
+graph.add_edge("search_company_and_role", "generate_question")
 graph.add_edge("generate_question", "answer_1st_question")
 graph.add_edge("answer_1st_question", "answer_2nd_question")
 graph.add_edge("answer_2nd_question", "answer_3rd_question")
-graph.add_edge("answer_3rd_question",'feedback_generator')
+graph.add_edge("answer_3rd_question", 'feedback_generator')
 graph.add_edge("feedback_generator", "generate_roadmap")
 graph.add_edge("generate_roadmap", END)
 

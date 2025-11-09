@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Download, Star, TrendingUp, Target, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
+import { HistorySkeleton } from './LoadingSkeleton';
+import { Star, Clock, Calendar, Download, X, Target, TrendingUp, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import PinButton from './PinButton';
 
@@ -10,6 +12,7 @@ const PinnedResults = () => {
   const [error, setError] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const { user } = useAuth();
+  const toast = useToast();
 
   useEffect(() => {
     if (user) {
@@ -28,14 +31,21 @@ const PinnedResults = () => {
         },
       });
 
+      if (response.status === 401) {
+        toast.error('Session expired. Please login again.');
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         setPinnedSessions(data.pinned_sessions || []);
       } else {
         setError('Failed to fetch pinned sessions');
+        toast.error('Failed to fetch pinned sessions');
       }
     } catch (err) {
       setError('Network error occurred');
+      toast.error('Network error occurred');
       console.error('Error fetching pinned sessions:', err);
     } finally {
       setLoading(false);
@@ -53,6 +63,11 @@ const PinnedResults = () => {
         },
       });
 
+      if (response.status === 401) {
+        toast.error('Session expired. Please login again.');
+        return;
+      }
+
       if (response.ok) {
         // Remove from pinned sessions
         setPinnedSessions(prev => prev.filter(session => session.thread_id !== sessionId));
@@ -66,9 +81,9 @@ const PinnedResults = () => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 8) return 'text-green-600';
-    if (score >= 6) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 8) return 'text-green-600 dark:text-green-400';
+    if (score >= 6) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   const getScoreIcon = (score) => {
@@ -123,54 +138,50 @@ ${session.roadmap || 'No roadmap available'}
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please log in</h2>
-          <p className="text-gray-600">You need to be logged in to view your pinned results.</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Please log in</h2>
+          <p className="text-gray-600 dark:text-gray-400">You need to be logged in to view your pinned results.</p>
         </div>
       </div>
     );
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <HistorySkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
     
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
 
         {error && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-600 p-4">
             <div className="flex">
               <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
               </div>
             </div>
           </div>
         )}
 
   
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {!selectedSession && (
           <>
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">📌 Pinned Results</h1>
-              <p className="mt-2 text-gray-600">Your saved interview results that you can access anytime.</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">📌 Pinned Results</h1>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">Your saved interview results that you can access anytime.</p>
             </div>
 
             {error && (
-              <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+              <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-600 p-4">
                 <div className="flex">
                   <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                   </div>
                 </div>
               </div>
@@ -179,25 +190,25 @@ ${session.roadmap || 'No roadmap available'}
             {pinnedSessions.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📌</div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">No Pinned Results</h2>
-                <p className="text-gray-600 mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">No Pinned Results</h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Pin your interview results to save them for future reference. 
                   Pinned results will stay here even after you navigate away from the results page.
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-500">
                   Complete an interview and use the pin button on the results page to save important results.
                 </p>
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {pinnedSessions.map((session) => (
-                  <div key={session.thread_id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                  <div key={session.thread_id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                           {session.role} at {session.company}
                         </h3>
-                        <p className="text-sm text-gray-500">{formatDate(session.created_at)}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(session.created_at)}</p>
                       </div>
                       <button
                         onClick={() => unpinSession(session.thread_id)}
@@ -213,14 +224,14 @@ ${session.roadmap || 'No roadmap available'}
                     {session.average_score > 0 && (
                       <div className="mb-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Score</span>
-                          <span className="text-lg font-bold text-indigo-600">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Score</span>
+                          <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                             {session.average_score.toFixed(1)}/10
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-1">
                           <div
-                            className="bg-indigo-600 h-2 rounded-full"
+                            className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full"
                             style={{ width: `${(session.average_score / 10) * 100}%` }}
                           ></div>
                         </div>
@@ -230,15 +241,15 @@ ${session.roadmap || 'No roadmap available'}
                     <div className="space-y-3">
                       {session.feedback && (
                         <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-1">Feedback</h4>
-                          <p className="text-sm text-gray-600 line-clamp-3">{session.feedback.substring(0, 100)}...</p>
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Feedback</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{session.feedback.substring(0, 100)}...</p>
                         </div>
                       )}
 
                       {session.roadmap && (
                         <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-1">Roadmap</h4>
-                          <p className="text-sm text-gray-600 line-clamp-3">{session.roadmap.substring(0, 100)}...</p>
+                          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Roadmap</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{session.roadmap.substring(0, 100)}...</p>
                         </div>
                       )}
                     </div>
@@ -273,11 +284,11 @@ ${session.roadmap || 'No roadmap available'}
             </div>
 
             {/* Header - Same as Result component */}
-            <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Results</h1>
-                  <p className="text-xl text-gray-600">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Interview Results</h1>
+                  <p className="text-xl text-gray-600 dark:text-gray-400">
                     {selectedSession.role} at {selectedSession.company}
                   </p>
                 </div>
@@ -295,7 +306,7 @@ ${session.roadmap || 'No roadmap available'}
                   />
                   <button
                     onClick={() => downloadResults(selectedSession)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
                   >
                     <Download className="h-4 w-4" />
                     <span>Download Results</span>
@@ -321,11 +332,11 @@ ${session.roadmap || 'No roadmap available'}
             </div>
 
             {/* Tabs - Same as Result component */}
-            <div className="bg-white rounded-lg shadow-lg mb-8">
-              <div className="border-b border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg mb-8">
+              <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="flex space-x-8 px-8">
                   <button
-                    className="py-4 px-1 border-b-2 border-primary-500 text-primary-600 font-medium text-sm"
+                    className="py-4 px-1 border-b-2 border-primary-500 text-primary-600 dark:text-primary-400 font-medium text-sm"
                   >
                     <div className="flex items-center space-x-2">
                       <Star className="h-4 w-4" />
@@ -338,9 +349,9 @@ ${session.roadmap || 'No roadmap available'}
               <div className="p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">{formatDate(selectedSession.created_at)}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(selectedSession.created_at)}</span>
                     {selectedSession.average_score > 0 && (
-                      <span className="text-xl font-bold text-indigo-600">
+                      <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
                         Score: {selectedSession.average_score.toFixed(1)}/10
                       </span>
                     )}
@@ -348,10 +359,10 @@ ${session.roadmap || 'No roadmap available'}
 
                   {selectedSession.feedback && (
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-6">📝 Overall Feedback</h2>
-                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
-                        <div className="prose prose-lg max-w-none">
-                          <p className="text-gray-700 whitespace-pre-wrap">{selectedSession.feedback}</p>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">📝 Overall Feedback</h2>
+                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-6">
+                        <div className="prose prose-lg dark:prose-invert max-w-none">
+                          <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{selectedSession.feedback}</p>
                         </div>
                       </div>
                     </div>
@@ -359,9 +370,9 @@ ${session.roadmap || 'No roadmap available'}
 
                   {selectedSession.roadmap && (
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-6">🗺️ Personalized Learning Roadmap</h2>
-                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
-                        <div className="roadmap-content prose prose-lg max-w-none">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">🗺️ Personalized Learning Roadmap</h2>
+                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-6">
+                        <div className="roadmap-content prose prose-lg dark:prose-invert max-w-none text-gray-800 dark:text-gray-200">
                           <ReactMarkdown>{selectedSession.roadmap}</ReactMarkdown>
                         </div>
                       </div>
@@ -373,26 +384,26 @@ ${session.roadmap || 'No roadmap available'}
 
             {/* Action Cards - Same as Result component */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="bg-green-100 rounded-full p-2">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-2">
+                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Pinned Result</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pinned Result</h3>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   This result has been pinned for future reference. You can access it anytime from the pinned results section.
                 </p>
               </div>
 
-              <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="bg-yellow-100 rounded-full p-2">
-                    <TrendingUp className="h-6 w-6 text-yellow-600" />
+                  <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-full p-2">
+                    <TrendingUp className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Keep Improving</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Keep Improving</h3>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-gray-400">
                   Use the learning roadmap to continue improving your skills. Practice makes perfect!
                 </p>
               </div>

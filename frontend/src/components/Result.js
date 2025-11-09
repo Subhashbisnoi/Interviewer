@@ -8,9 +8,9 @@ const Result = ({ session }) => {
   const [activeTab, setActiveTab] = useState('feedback');
 
   const getScoreColor = (score) => {
-    if (score >= 8) return 'text-green-600';
-    if (score >= 6) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 8) return 'text-green-600 dark:text-green-400';
+    if (score >= 6) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   const getScoreIcon = (score) => {
@@ -62,11 +62,11 @@ ${session.roadmap}
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Results</h1>
-            <p className="text-xl text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Interview Results</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               {session.role} at {session.company}
             </p>
           </div>
@@ -83,7 +83,7 @@ ${session.roadmap}
             />
             <button
               onClick={downloadResults}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
             >
               <Download className="h-4 w-4" />
               <span>Download Results</span>
@@ -116,15 +116,15 @@ ${session.roadmap}
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-lg mb-8">
-        <div className="border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg mb-8">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex space-x-8 px-8">
             <button
               onClick={() => setActiveTab('feedback')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'feedback'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <div className="flex items-center space-x-2">
@@ -136,8 +136,8 @@ ${session.roadmap}
               onClick={() => setActiveTab('roadmap')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'roadmap'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <div className="flex items-center space-x-2">
@@ -151,16 +151,16 @@ ${session.roadmap}
         <div className="p-8">
           {activeTab === 'feedback' && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Question-by-Question Feedback</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Question-by-Question Feedback</h2>
               
               {session.questions.map((question, index) => (
-                <div key={index} className={`border rounded-lg p-6 ${getFeedbackBorderClass(session.feedback[index]?.marks)}`}>
+                <div key={index} className={`border dark:border-gray-700 rounded-lg p-6 ${getFeedbackBorderClass(session.feedback[index]?.marks)} bg-white dark:bg-gray-800`}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className="bg-primary-100 rounded-full p-2">
-                        <Target className="h-5 w-5 text-primary-600" />
+                      <div className="bg-primary-100 dark:bg-primary-900/30 rounded-full p-2">
+                        <Target className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                       </div>
-                      <span className="text-lg font-semibold text-gray-900">
+                      <span className="text-lg font-semibold text-gray-900 dark:text-white">
                         Question {index + 1}
                       </span>
                     </div>
@@ -173,20 +173,20 @@ ${session.roadmap}
                   </div>
                   
                   <div className="mb-4">
-                    <h3 className="font-medium text-gray-900 mb-2">Question:</h3>
-                    <p className="text-gray-700 leading-relaxed">{question}</p>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-200 mb-2">Question:</h3>
+                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{question}</p>
                   </div>
                   
                   <div className="mb-4">
-                    <h3 className="font-medium text-gray-900 mb-2">Your Answer:</h3>
-                    <p className="text-gray-700 leading-relaxed bg-gray-50 p-3 rounded">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-200 mb-2">Your Answer:</h3>
+                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed bg-gray-50 dark:bg-gray-700 p-3 rounded">
                       {session.answers[index]}
                     </p>
                   </div>
                   
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Feedback:</h3>
-                    <p className="text-gray-700 leading-relaxed">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-200 mb-2">Feedback:</h3>
+                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
                       {session.feedback[index]?.feedback || 'No feedback available'}
                     </p>
                   </div>
@@ -197,9 +197,9 @@ ${session.roadmap}
 
           {activeTab === 'roadmap' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Personalized Learning Roadmap</h2>
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
-                <div className="roadmap-content prose prose-lg max-w-none">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Personalized Learning Roadmap</h2>
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-6">
+                <div className="roadmap-content prose prose-lg dark:prose-invert max-w-none text-gray-800 dark:text-gray-200">
                   <ReactMarkdown>{session.roadmap}</ReactMarkdown>
                 </div>
               </div>
@@ -210,27 +210,27 @@ ${session.roadmap}
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="bg-green-100 rounded-full p-2">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="bg-green-100 dark:bg-green-900/30 rounded-full p-2">
+              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">What You Did Well</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">What You Did Well</h3>
           </div>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Based on your scores, you showed strong understanding in areas where you scored 8+ points. 
             Keep building on these strengths!
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="bg-yellow-100 rounded-full p-2">
-              <TrendingUp className="h-6 w-6 text-yellow-600" />
+            <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-full p-2">
+              <TrendingUp className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Areas for Improvement</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Areas for Improvement</h3>
           </div>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Focus on the learning roadmap above to improve areas where you scored lower. 
             Practice makes perfect!
           </p>

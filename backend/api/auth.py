@@ -67,6 +67,7 @@ pwd_context = CryptContext(
     deprecated="auto"  # Automatically mark bcrypt as deprecated
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 # Pydantic models
 class GoogleCredential(BaseModel):
@@ -197,6 +198,29 @@ async def get_current_user(
     user = get_user(db, email=token_data.email)
     if user is None:
         raise credentials_exception
+    return user
+
+async def get_current_user_optional(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """
+    Get the current user if authenticated, otherwise return None.
+    This allows endpoints to work with or without authentication.
+    """
+    if not token:
+        return None
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        token_data = TokenData(email=email)
+    except JWTError:
+        return None
+    
+    user = get_user(db, email=token_data.email)
     return user
 
 @router.get("/me", response_model=UserResponse)
@@ -744,5 +768,148 @@ async def reset_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while resetting password"
         )
+
+
+# Profile Management Endpoints
+
+class ProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    current_role: Optional[str] = None
+    experience_years: Optional[int] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    skills: Optional[list] = None
+    bio: Optional[str] = None
+    preferred_industries: Optional[list] = None
+
+class ProfileResponse(BaseModel):
+    id: int
+    email: str
+    full_name: Optional[str]
+    phone: Optional[str]
+    location: Optional[str]
+    current_role: Optional[str]
+    experience_years: Optional[int]
+    linkedin_url: Optional[str]
+    github_url: Optional[str]
+    portfolio_url: Optional[str]
+    skills: Optional[list]
+    bio: Optional[str]
+    preferred_industries: Optional[list]
+    profile_picture_url: Optional[str]
+    created_at: datetime
+    completion_percentage: int
+
+@router.get("/profile", response_model=ProfileResponse)
+async def get_profile(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """Get current user's profile with completion percentage."""
+    
+    # Calculate profile completion percentage
+    fields = [
+        current_user.full_name,
+        current_user.phone,
+        current_user.location,
+        current_user.current_role,
+        current_user.experience_years,
+        current_user.linkedin_url,
+        current_user.github_url,
+        current_user.portfolio_url,
+        current_user.skills,
+        current_user.bio,
+        current_user.preferred_industries,
+    ]
+    
+    completed_fields = sum(1 for field in fields if field)
+    total_fields = len(fields)
+    completion_percentage = int((completed_fields / total_fields) * 100)
+    
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "phone": current_user.phone,
+        "location": current_user.location,
+        "current_role": current_user.current_role,
+        "experience_years": current_user.experience_years,
+        "linkedin_url": current_user.linkedin_url,
+        "github_url": current_user.github_url,
+        "portfolio_url": current_user.portfolio_url,
+        "skills": current_user.skills,
+        "bio": current_user.bio,
+        "preferred_industries": current_user.preferred_industries,
+        "profile_picture_url": current_user.profile_picture_url,
+        "created_at": current_user.created_at,
+        "completion_percentage": completion_percentage
+    }
+
+@router.put("/profile", response_model=ProfileResponse)
+async def update_profile(
+    profile_data: ProfileUpdateRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    """Update current user's profile."""
+    
+    try:
+        # Update only provided fields
+        update_data = profile_data.dict(exclude_unset=True)
+        
+        for field, value in update_data.items():
+            setattr(current_user, field, value)
+        
+        db.commit()
+        db.refresh(current_user)
+        
+        # Calculate profile completion percentage
+        fields = [
+            current_user.full_name,
+            current_user.phone,
+            current_user.location,
+            current_user.current_role,
+            current_user.experience_years,
+            current_user.linkedin_url,
+            current_user.github_url,
+            current_user.portfolio_url,
+            current_user.skills,
+            current_user.bio,
+            current_user.preferred_industries,
+        ]
+        
+        completed_fields = sum(1 for field in fields if field)
+        total_fields = len(fields)
+        completion_percentage = int((completed_fields / total_fields) * 100)
+        
+        return {
+            "id": current_user.id,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "phone": current_user.phone,
+            "location": current_user.location,
+            "current_role": current_user.current_role,
+            "experience_years": current_user.experience_years,
+            "linkedin_url": current_user.linkedin_url,
+            "github_url": current_user.github_url,
+            "portfolio_url": current_user.portfolio_url,
+            "skills": current_user.skills,
+            "bio": current_user.bio,
+            "preferred_industries": current_user.preferred_industries,
+            "profile_picture_url": current_user.profile_picture_url,
+            "created_at": current_user.created_at,
+            "completion_percentage": completion_percentage
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile: {str(e)}"
+        )
+
 
 

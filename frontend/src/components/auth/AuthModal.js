@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import GoogleAuthButton from './GoogleAuthButton';
 import GitHubAuthButton from './GitHubAuthButton';
 import ForgotPassword from './ForgotPassword';
@@ -13,6 +14,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login, signup, user } = useAuth();
+  const toast = useToast();
 
   // Close modal automatically when user becomes authenticated
   useEffect(() => {
@@ -64,6 +66,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
         const result = await login(email, password);
         if (result.success) {
+          toast.success('Welcome back! Logged in successfully.');
           handleClose();
         } else {
           setError(result.error || 'Login failed');
@@ -92,6 +95,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           email,
           password
         });
+        toast.success('Account created successfully! Welcome aboard!');
         handleClose();
       }
     } catch (err) {

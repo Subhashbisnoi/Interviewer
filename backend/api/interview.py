@@ -21,7 +21,7 @@ from feedback import feedback_generator
 from roadmap import generate_roadmap
 
 # Import authentication
-from api.auth import get_current_user
+from api.auth import get_current_user, get_current_user_optional
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -89,7 +89,7 @@ async def upload_resume(file: UploadFile = File(...)):
 async def start_interview(
     interview_data: Dict[str, Any], 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Start a new interview session by generating questions only."""
     try:
@@ -134,7 +134,7 @@ async def start_interview(
         
         # Create database session
         db_session = InterviewSession(
-            user_id=current_user.id,  # Link to the authenticated user
+            user_id=current_user.id if current_user else None,  # Link to user if authenticated
             thread_id=session_id,
             role=role,
             company=company,
@@ -168,7 +168,7 @@ async def start_interview(
 async def submit_answers(
     session_data: Dict[str, Any], 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_optional)
 ):
     """Submit all answers and generate feedback and roadmap."""
     try:
@@ -176,13 +176,22 @@ async def submit_answers(
         if not session_id:
             raise HTTPException(status_code=400, detail="Session ID is required")
         
-        # Check if session exists in database and belongs to the user
-        session = db.query(InterviewSession).filter(
-            InterviewSession.thread_id == session_id,
-            InterviewSession.user_id == current_user.id
-        ).first()
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
+        # Check if session exists in database
+        if current_user:
+            # If user is authenticated, check that session belongs to them
+            session = db.query(InterviewSession).filter(
+                InterviewSession.thread_id == session_id,
+                InterviewSession.user_id == current_user.id
+            ).first()
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
+        else:
+            # If no user, just check if session exists
+            session = db.query(InterviewSession).filter(
+                InterviewSession.thread_id == session_id
+            ).first()
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
         
         answers: List[str] = session_data.get("answers", [])
         if len(answers) != 3:
@@ -585,3 +594,144 @@ async def get_pinned_sessions(
     except Exception as e:
         print(f"Error fetching pinned sessions: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch pinned sessions")
+
+@router.get("/leaderboard")
+async def get_leaderboard(
+    timeframe: str = "all",  # all, week, month
+    role_filter: str = None,  # Optional: filter by specific role
+    limit: int = 50,
+    current_user: User = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    """Get leaderboard showing top performers (anonymized for privacy)."""
+    try:
+        from sqlalchemy import func, and_
+        from datetime import timedelta
+        
+        # Base query for completed sessions with scores
+        query = db.query(
+            InterviewSession.user_id,
+            User.full_name,
+            User.email,
+            func.count(InterviewSession.id).label('total_interviews'),
+            func.avg(InterviewSession.average_score).label('avg_score'),
+            func.max(InterviewSession.average_score).label('best_score'),
+            func.sum(InterviewSession.total_score).label('total_points')
+        ).join(
+            User, InterviewSession.user_id == User.id
+        ).filter(
+            InterviewSession.status == "completed",
+            InterviewSession.average_score > 0
+        )
+        
+        # Apply role filter if specified
+        if role_filter:
+            query = query.filter(InterviewSession.role.ilike(f"%{role_filter}%"))
+        
+        # Apply timeframe filter
+        if timeframe == "week":
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            query = query.filter(InterviewSession.completed_at >= week_ago)
+        elif timeframe == "month":
+            month_ago = datetime.utcnow() - timedelta(days=30)
+            query = query.filter(InterviewSession.completed_at >= month_ago)
+        
+        # Group by user and order by average score
+        query = query.group_by(
+            InterviewSession.user_id, 
+            User.full_name,
+            User.email
+        ).order_by(
+            func.avg(InterviewSession.average_score).desc()
+        ).limit(limit)
+        
+        results = query.all()
+        
+        # Format leaderboard data
+        leaderboard = []
+        current_user_rank = None
+        current_user_data = None
+        
+        for rank, result in enumerate(results, 1):
+            user_id, full_name, email, total_interviews, avg_score, best_score, total_points = result
+            
+            # Anonymize user data (show only first name + initial, or "User #X")
+            if full_name:
+                name_parts = full_name.split()
+                if len(name_parts) > 1:
+                    display_name = f"{name_parts[0]} {name_parts[1][0]}."
+                else:
+                    display_name = name_parts[0]
+            else:
+                display_name = f"User #{user_id}"
+            
+            entry = {
+                "rank": rank,
+                "display_name": display_name,
+                "total_interviews": total_interviews,
+                "average_score": round(float(avg_score), 2) if avg_score else 0,
+                "best_score": round(float(best_score), 2) if best_score else 0,
+                "total_points": int(total_points) if total_points else 0,
+                "is_current_user": False
+            }
+            
+            # Check if this is the current user
+            if current_user and user_id == current_user.id:
+                entry["is_current_user"] = True
+                entry["display_name"] = "You"
+                current_user_rank = rank
+                current_user_data = entry
+            
+            leaderboard.append(entry)
+        
+        # If current user is not in top results, add their stats separately
+        if current_user and not current_user_rank:
+            user_stats = db.query(
+                func.count(InterviewSession.id).label('total_interviews'),
+                func.avg(InterviewSession.average_score).label('avg_score'),
+                func.max(InterviewSession.average_score).label('best_score'),
+                func.sum(InterviewSession.total_score).label('total_points')
+            ).filter(
+                InterviewSession.user_id == current_user.id,
+                InterviewSession.status == "completed",
+                InterviewSession.average_score > 0
+            ).first()
+            
+            if user_stats and user_stats.total_interviews > 0:
+                # Calculate rank
+                better_users = db.query(func.count(func.distinct(InterviewSession.user_id))).filter(
+                    InterviewSession.status == "completed",
+                    InterviewSession.average_score > 0
+                ).group_by(InterviewSession.user_id).having(
+                    func.avg(InterviewSession.average_score) > user_stats.avg_score
+                ).count()
+                
+                current_user_data = {
+                    "rank": better_users + 1,
+                    "display_name": "You",
+                    "total_interviews": user_stats.total_interviews,
+                    "average_score": round(float(user_stats.avg_score), 2) if user_stats.avg_score else 0,
+                    "best_score": round(float(user_stats.best_score), 2) if user_stats.best_score else 0,
+                    "total_points": int(user_stats.total_points) if user_stats.total_points else 0,
+                    "is_current_user": True
+                }
+        
+        # Get total number of users with completed interviews
+        total_users = db.query(func.count(func.distinct(InterviewSession.user_id))).filter(
+            InterviewSession.status == "completed",
+            InterviewSession.average_score > 0
+        ).scalar()
+        
+        return {
+            "leaderboard": leaderboard,
+            "current_user": current_user_data,
+            "total_users": total_users,
+            "timeframe": timeframe,
+            "role_filter": role_filter
+        }
+        
+    except Exception as e:
+        print(f"Error fetching leaderboard: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to fetch leaderboard")

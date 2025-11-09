@@ -16,6 +16,19 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     
+    # Profile fields
+    phone = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    current_role = Column(String, nullable=True)
+    experience_years = Column(Integer, nullable=True)
+    linkedin_url = Column(String, nullable=True)
+    github_url = Column(String, nullable=True)
+    portfolio_url = Column(String, nullable=True)
+    skills = Column(JSON, nullable=True)  # List of skills
+    bio = Column(Text, nullable=True)
+    preferred_industries = Column(JSON, nullable=True)  # List of preferred industries
+    profile_picture_url = Column(String, nullable=True)
+    
     # Relationships
     interviews = relationship("InterviewSession", back_populates="user")
     otps = relationship("OTP", back_populates="user")
@@ -39,7 +52,7 @@ class InterviewSession(Base):
     __tablename__ = "interview_sessions"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Allow anonymous interviews
     thread_id = Column(String, unique=True, index=True)  # LangGraph thread ID
     role = Column(String)
     company = Column(String)
@@ -102,6 +115,9 @@ class InterviewState(TypedDict):
     role: str
     company: str
     resume_text: str
+    
+    # Company research data
+    company_research: Optional[Dict[str, Any]]
     
     # Interview progress
     questions: List[str]

@@ -4,8 +4,8 @@ services:
     env: python
     region: oregon
     plan: starter
-    buildCommand: "pip install --upgrade pip setuptools wheel && pip install -r backend/requirements.txt --no-cache-dir && cd backend && python init_production_db.py"
-    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "pip install --upgrade pip setuptools wheel && pip install -r backend/requirements.txt --no-cache-dir"
+    startCommand: "cd backend && python init_production_db.py && uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -23,6 +23,10 @@ services:
         fromDatabase:
           name: ai-interviewer-db
           property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
 
 databases:
   - name: ai-interviewer-db

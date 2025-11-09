@@ -21,11 +21,10 @@ from database import Base, engine
 Base.metadata.create_all(bind=engine)
 
 # Import the routers after database initialization
-# Temporarily disable AI features for deployment
-# from api.interview import router as interview_router
-# from api.interview_v2 import router as interview_v2_router
-# from api.tts import router as tts_router
-# from api.voice import router as voice_router
+from api.interview import router as interview_router
+from api.interview_v2 import router as interview_v2_router
+from api.tts import router as tts_router
+from api.voice import router as voice_router
 from api.auth import router as auth_router
 
 app = FastAPI(
@@ -81,11 +80,10 @@ async def options_handler(request: Request, response: Response):
 
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
-# Temporarily disable AI and audio features for deployment
-# app.include_router(interview_router)
-# app.include_router(interview_v2_router)
-# app.include_router(tts_router)
-# app.include_router(voice_router)
+app.include_router(interview_router)
+app.include_router(interview_v2_router)
+app.include_router(tts_router)
+app.include_router(voice_router)
 
 # Basic routes
 @app.get("/")

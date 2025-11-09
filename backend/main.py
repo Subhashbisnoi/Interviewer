@@ -17,8 +17,8 @@ if current_dir not in sys.path:
 # Initialize database before importing routers
 from database import Base, engine
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Note: Database tables are created by init_production_db.py in startCommand
+# This ensures DATABASE_URL from Render is used instead of SQLite fallback
 
 # Import the routers after database initialization
 from api.interview import router as interview_router

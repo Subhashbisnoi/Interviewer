@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Home, Download, Star, TrendingUp, Target, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import PinButton from './PinButton';
+import IntegrityBadge from './IntegrityBadge';
 
 const Result = ({ session }) => {
   const [activeTab, setActiveTab] = useState('feedback');
@@ -99,7 +100,7 @@ ${session.roadmap}
         </div>
 
         {/* Score Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6 text-center">
             <div className="text-3xl font-bold mb-2">{session.total_score}/30</div>
             <div className="text-blue-100">Total Score</div>
@@ -113,6 +114,11 @@ ${session.roadmap}
             <div className="text-purple-100">Questions</div>
           </div>
         </div>
+
+        {/* Integrity Badge */}
+        {session.proctoring_data && (
+          <IntegrityBadge proctorData={session.proctoring_data} />
+        )}
       </div>
 
       {/* Tabs */}

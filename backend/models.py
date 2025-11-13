@@ -16,22 +16,19 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     
-    # Profile fields
-    phone = Column(String, nullable=True)
-    location = Column(String, nullable=True)
-    current_role = Column(String, nullable=True)
-    experience_years = Column(Integer, nullable=True)
-    linkedin_url = Column(String, nullable=True)
-    github_url = Column(String, nullable=True)
-    portfolio_url = Column(String, nullable=True)
-    skills = Column(JSON, nullable=True)  # List of skills
-    bio = Column(Text, nullable=True)
-    preferred_industries = Column(JSON, nullable=True)  # List of preferred industries
-    profile_picture_url = Column(String, nullable=True)
+    # Subscription fields
+    subscription_tier = Column(String, default="free")  # free, premium
+    subscription_status = Column(String, default="active")  # active, cancelled, expired
+    subscription_expires_at = Column(DateTime, nullable=True)
+    razorpay_customer_id = Column(String, nullable=True)
+    razorpay_subscription_id = Column(String, nullable=True)
+    interviews_this_month = Column(Integer, default=0)  # Track monthly usage
+    last_interview_reset = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     interviews = relationship("InterviewSession", back_populates="user")
     otps = relationship("OTP", back_populates="user")
+    payments = relationship("Payment", back_populates="user")
 
 class OTP(Base):
     __tablename__ = "otps"
@@ -61,6 +58,7 @@ class InterviewSession(Base):
     total_score = Column(Float, default=0.0)
     average_score = Column(Float, default=0.0)
     is_pinned = Column(Boolean, default=False)  # For pinned results
+    proctoring_data = Column(JSON, nullable=True)  # Store proctoring/integrity data
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
@@ -85,6 +83,25 @@ class ChatMessage(Base):
     
     # Relationships
     session = relationship("InterviewSession", back_populates="messages")
+
+class Payment(Base):
+    __tablename__ = "payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    razorpay_order_id = Column(String, unique=True, index=True, nullable=False)
+    razorpay_payment_id = Column(String, unique=True, index=True, nullable=True)
+    razorpay_signature = Column(String, nullable=True)
+    amount = Column(Float, nullable=False)  # Amount in INR
+    currency = Column(String, default="INR")
+    status = Column(String, default="created")  # created, paid, failed, refunded
+    payment_method = Column(String, nullable=True)  # card, upi, netbanking, wallet
+    plan_type = Column(String, nullable=False)  # monthly, yearly
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="payments")
 
 # Pydantic Models (for request/response validation)
 

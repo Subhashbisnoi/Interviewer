@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, ArrowRight, Brain } from 'lucide-react';
 import RoboInterviewer from './RoboInterviewer';
 import VoiceRecorder from '../VoiceRecorder';
+import useInterviewProctor from '../../hooks/useInterviewProctor';
+import ProctorWarning from '../ProctorWarning';
 
 const Interview = ({ interviewData, onSessionCreated }) => {
   const navigate = useNavigate();
@@ -12,6 +14,16 @@ const Interview = ({ interviewData, onSessionCreated }) => {
   const [error, setError] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
+  
+  // Initialize proctoring
+  const {
+    proctorData,
+    showWarning,
+    currentWarning,
+    getIntegrityScore,
+    getIntegrityLevel,
+    dismissWarning
+  } = useInterviewProctor(true);
 
   const questions = interviewData.questions || [];
 
@@ -64,7 +76,8 @@ const Interview = ({ interviewData, onSessionCreated }) => {
         headers,
         body: JSON.stringify({
           session_id: interviewData.session_id,
-          answers: answers
+          answers: answers,
+          proctoring_data: proctorData // Include proctoring data
         })
       });
 
@@ -119,6 +132,13 @@ const Interview = ({ interviewData, onSessionCreated }) => {
 
   return (
     <div className="max-w-6xl mx-auto px-4">
+      {/* Proctoring Warning */}
+      <ProctorWarning 
+        show={showWarning} 
+        message={currentWarning} 
+        onDismiss={dismissWarning}
+      />
+      
       {/* Interview Video UI */}
       <RoboInterviewer 
         questionText={questions[currentQuestion]}
@@ -134,9 +154,21 @@ const Interview = ({ interviewData, onSessionCreated }) => {
               {interviewData.role} at {interviewData.company}
             </p>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Clock className="h-4 w-4" />
-            <span>Question {currentQuestion + 1} of {questions.length}</span>
+          <div className="flex items-center space-x-4">
+            {/* Integrity Score Badge */}
+            <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+              getIntegrityLevel().color === 'green' ? 'bg-green-100 text-green-800' :
+              getIntegrityLevel().color === 'blue' ? 'bg-blue-100 text-blue-800' :
+              getIntegrityLevel().color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+              getIntegrityLevel().color === 'orange' ? 'bg-orange-100 text-orange-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              Integrity: {getIntegrityLevel().label} ({getIntegrityScore()}%)
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Clock className="h-4 w-4" />
+              <span>Question {currentQuestion + 1} of {questions.length}</span>
+            </div>
           </div>
         </div>
 

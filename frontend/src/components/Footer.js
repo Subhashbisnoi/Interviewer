@@ -33,7 +33,7 @@ const Footer = () => {
               <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                 <Linkedin className="h-5 w-5" />
               </a>
-              <a href="mailto:contact@aiinterviewer.com" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              <a href="mailto:rarsubhash1@gmail.com" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                 <Mail className="h-5 w-5" />
               </a>
             </div>
@@ -69,29 +69,52 @@ const Footer = () => {
                 <Link to="/help" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Help Center</Link>
               </li>
               <li>
-                <Link to="/faq" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">FAQ</Link>
+                <Link to="/contact" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Contact Us</Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Privacy Policy</Link>
+                <Link to="/privacy-policy" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Privacy Policy</Link>
               </li>
               <li>
                 <Link to="/terms" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Terms of Service</Link>
               </li>
               <li>
-                <Link to="/blog" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Blog</Link>
+                <Link to="/refund-policy" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Refund Policy</Link>
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            © {currentYear} AI Interviewer. All rights reserved.
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 md:mt-0">
-            Made with ❤️ for job seekers worldwide
-          </p>
+        <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex flex-wrap justify-center gap-4 mb-4">
+            <Link to="/privacy-policy" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
+            <span className="text-gray-400">•</span>
+            <Link to="/terms" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              Terms and Conditions
+            </Link>
+            <span className="text-gray-400">•</span>
+            <Link to="/refund-policy" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              Cancellation and Refund
+            </Link>
+            <span className="text-gray-400">•</span>
+            <Link to="/shipping-policy" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              Shipping and Delivery
+            </Link>
+            <span className="text-gray-400">•</span>
+            <Link to="/contact" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+              Contact Us
+            </Link>
+          </div>
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              © {currentYear} AI Interviewer. All rights reserved.
+            </p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 md:mt-0">
+              Made with ❤️ for job seekers worldwide
+            </p>
+          </div>
         </div>
       </div>
     </footer>

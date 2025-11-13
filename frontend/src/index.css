@@ -45,6 +45,22 @@ code {
   animation: slide-in 0.3s ease-out;
 }
 
+/* Proctor Warning Animation */
+@keyframes slideDown {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
+}
+
 /* Loading Skeleton Animation */
 @keyframes pulse {
   0%, 100% {

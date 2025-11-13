@@ -26,6 +26,7 @@ from api.interview_v2 import router as interview_v2_router
 from api.tts import router as tts_router
 from api.voice import router as voice_router
 from api.auth import router as auth_router
+from api.payment import router as payment_router
 
 app = FastAPI(
     title="AI Interviewer API",
@@ -80,6 +81,7 @@ async def options_handler(request: Request, response: Response):
 
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
+app.include_router(payment_router)
 app.include_router(interview_router)
 app.include_router(interview_v2_router)
 app.include_router(tts_router)

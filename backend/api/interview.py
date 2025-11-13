@@ -19,6 +19,7 @@ from common import extract_resume_text
 from generator import generate_question
 from feedback import feedback_generator
 from roadmap import generate_roadmap
+from cache import cache
 
 # Import authentication
 from api.auth import get_current_user, get_current_user_optional
@@ -93,6 +94,23 @@ async def start_interview(
 ):
     """Start a new interview session by generating questions only."""
     try:
+        # Check subscription limits for authenticated users
+        if current_user:
+            from subscription_middleware import check_subscription_limit, increment_interview_count
+            
+            limit_check = check_subscription_limit(current_user, db)
+            
+            if not limit_check["allowed"]:
+                raise HTTPException(
+                    status_code=403, 
+                    detail={
+                        "message": limit_check["message"],
+                        "tier": limit_check["tier"],
+                        "limit": limit_check.get("limit"),
+                        "upgrade_required": True
+                    }
+                )
+        
         role = interview_data.get("role")
         company = interview_data.get("company")
         resume_text = interview_data.get("resume_text", "")
@@ -145,6 +163,11 @@ async def start_interview(
         db.add(db_session)
         db.commit()
         
+        # Increment interview count for authenticated users
+        if current_user:
+            from subscription_middleware import increment_interview_count
+            increment_interview_count(current_user, db)
+        
         # Store in memory for the duration of the interview
         interview_sessions[session_id] = {
             "state": initial_state,
@@ -196,6 +219,9 @@ async def submit_answers(
         answers: List[str] = session_data.get("answers", [])
         if len(answers) != 3:
             raise HTTPException(status_code=400, detail="Exactly 3 answers are required")
+        
+        # Get proctoring data if provided
+        proctoring_data = session_data.get("proctoring_data")
         
         # Get questions from in-memory storage for now (we can improve this later)
         if session_id not in interview_sessions:
@@ -278,10 +304,16 @@ async def submit_answers(
         session.status = "completed"
         session.total_score = total_score
         session.average_score = avg_score
+        session.proctoring_data = proctoring_data  # Store proctoring data
         session.updated_at = datetime.utcnow()
         session.completed_at = datetime.utcnow()
         
         db.commit()
+        
+        # Invalidate cache after completing interview
+        if current_user:
+            cache.delete(f"analytics:user:{current_user.id}")
+        cache.invalidate_pattern("leaderboard:")
 
         # Clean up in-memory session
         if session_id in interview_sessions:
@@ -400,6 +432,12 @@ async def get_analytics(
 ):
     """Get analytics for the current user."""
     try:
+        # Check cache first (5 minutes TTL)
+        cache_key = f"analytics:user:{current_user.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+        
         # Get all sessions for the current user
         sessions = db.query(InterviewSession).filter(
             InterviewSession.user_id == current_user.id
@@ -442,7 +480,7 @@ async def get_analytics(
         
         print(f"DEBUG: Scores: {scores}, avg: {average_score}, best: {best_score}")
         
-        return {
+        result = {
             "total_interviews": total_interviews,
             "completed_interviews": completed_interviews,
             "average_score": round(average_score, 1),
@@ -450,6 +488,11 @@ async def get_analytics(
             "companies": list(companies),
             "roles": list(roles)
         }
+        
+        # Cache the result for 5 minutes (300 seconds)
+        cache.set(cache_key, result, ttl=300)
+        
+        return result
         
     except Exception as e:
         print(f"Error fetching analytics: {e}")
@@ -608,6 +651,56 @@ async def get_leaderboard(
         from sqlalchemy import func, and_
         from datetime import timedelta
         
+        # Check cache first (10 minutes TTL for leaderboard)
+        cache_key = f"leaderboard:{timeframe}:{role_filter or 'all'}:{limit}"
+        cached_data = cache.get(cache_key)
+        
+        if cached_data is not None:
+            # If we have cached data, update current_user info if logged in
+            if current_user:
+                # Check if current user is in leaderboard
+                found_in_list = False
+                for entry in cached_data["leaderboard"]:
+                    if entry.get("user_id") == current_user.id:
+                        entry["is_current_user"] = True
+                        entry["display_name"] = "You"
+                        cached_data["current_user"] = entry.copy()
+                        found_in_list = True
+                        break
+                
+                # If not in cached leaderboard, fetch current user's stats
+                if not found_in_list and cached_data.get("current_user") is None:
+                    user_stats = db.query(
+                        func.count(InterviewSession.id).label('total_interviews'),
+                        func.avg(InterviewSession.average_score).label('avg_score'),
+                        func.max(InterviewSession.average_score).label('best_score'),
+                        func.sum(InterviewSession.total_score).label('total_points')
+                    ).filter(
+                        InterviewSession.user_id == current_user.id,
+                        InterviewSession.status == "completed",
+                        InterviewSession.average_score > 0
+                    ).first()
+                    
+                    if user_stats and user_stats.total_interviews > 0:
+                        better_users = db.query(func.count(func.distinct(InterviewSession.user_id))).filter(
+                            InterviewSession.status == "completed",
+                            InterviewSession.average_score > 0
+                        ).group_by(InterviewSession.user_id).having(
+                            func.avg(InterviewSession.average_score) > user_stats.avg_score
+                        ).count()
+                        
+                        cached_data["current_user"] = {
+                            "rank": better_users + 1,
+                            "display_name": "You",
+                            "total_interviews": user_stats.total_interviews,
+                            "average_score": round(float(user_stats.avg_score), 2) if user_stats.avg_score else 0,
+                            "best_score": round(float(user_stats.best_score), 2) if user_stats.best_score else 0,
+                            "total_points": int(user_stats.total_points) if user_stats.total_points else 0,
+                            "is_current_user": True
+                        }
+            
+            return cached_data
+        
         # Base query for completed sessions with scores
         query = db.query(
             InterviewSession.user_id,
@@ -668,6 +761,7 @@ async def get_leaderboard(
             entry = {
                 "rank": rank,
                 "display_name": display_name,
+                "user_id": user_id,  # Store for cache matching
                 "total_interviews": total_interviews,
                 "average_score": round(float(avg_score), 2) if avg_score else 0,
                 "best_score": round(float(best_score), 2) if best_score else 0,
@@ -722,13 +816,18 @@ async def get_leaderboard(
             InterviewSession.average_score > 0
         ).scalar()
         
-        return {
+        result = {
             "leaderboard": leaderboard,
             "current_user": current_user_data,
             "total_users": total_users,
             "timeframe": timeframe,
             "role_filter": role_filter
         }
+        
+        # Cache the result for 10 minutes (600 seconds)
+        cache.set(cache_key, result, ttl=600)
+        
+        return result
         
     except Exception as e:
         print(f"Error fetching leaderboard: {e}")

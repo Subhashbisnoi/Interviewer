@@ -30,28 +30,38 @@ export const AuthProvider = ({ children }) => {
         if (token && loginTime) {
           const timeElapsed = Date.now() - parseInt(loginTime);
           
-          // If token is expired, logout
+          // If token is expired, clear it silently
           if (timeElapsed >= TOKEN_LIFETIME) {
-            handleSessionExpired();
+            localStorage.removeItem('token');
+            localStorage.removeItem('loginTime');
+            setUser(null);
             return;
           }
           
-          // Try to get current user
-          const userData = await getCurrentUser();
-          setUser(userData);
-          
-          // Set up warning timer
-          setupSessionWarning(timeElapsed);
+          // Try to get current user (but don't block the app)
+          try {
+            const userData = await getCurrentUser();
+            setUser(userData);
+            setupSessionWarning(timeElapsed);
+          } catch (error) {
+            // If getCurrentUser fails, just clear auth silently
+            console.error('Auth check failed:', error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('loginTime');
+            setUser(null);
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('loginTime');
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
 
+    // Start auth check in background - don't block app rendering
     checkAuth();
   }, []);
 
@@ -78,7 +88,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('loginTime');
     setUser(null);
     setSessionWarning(false);
-    navigate('/', { replace: true });
+    
+    // Only redirect if not on a public page
+    const publicPaths = ['/', '/about', '/help', '/leaderboard', '/pricing', '/privacy-policy', '/terms', '/refund-policy', '/shipping-policy', '/contact'];
+    const currentPath = window.location.pathname;
+    if (!publicPaths.includes(currentPath)) {
+      navigate('/', { replace: true });
+    }
   };
 
   const extendSession = async () => {
@@ -167,7 +183,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('loginTime');
     setUser(null);
     setSessionWarning(false);
-    navigate('/');
+    
+    // Only redirect if not on a public page
+    const publicPaths = ['/', '/about', '/help', '/leaderboard', '/pricing', '/privacy-policy', '/terms', '/refund-policy', '/shipping-policy', '/contact'];
+    const currentPath = window.location.pathname;
+    if (!publicPaths.includes(currentPath)) {
+      navigate('/');
+    }
   };
 
   return (
@@ -183,7 +205,7 @@ export const AuthProvider = ({ children }) => {
       extendSession,
       dismissWarning: () => setSessionWarning(false)
     }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, MessageSquare, Trophy, Settings, HelpCircle, FileText, Users, Sun, Moon } from 'lucide-react';
+import { Home, MessageSquare, Trophy, Settings, HelpCircle, FileText, Users, Sun, Moon, History, Pin, DollarSign } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 const Sidebar = () => {
@@ -10,7 +10,10 @@ const Sidebar = () => {
   const menuItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/dashboard', icon: MessageSquare, label: 'Dashboard' },
-    { path: '/results', icon: Trophy, label: 'Results' },
+    { path: '/history', icon: History, label: 'History' },
+    { path: '/pinned', icon: Pin, label: 'Pinned' },
+    { path: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
+    { path: '/pricing', icon: DollarSign, label: 'Pricing' },
     { path: '/about', icon: Users, label: 'About' },
     { path: '/help', icon: HelpCircle, label: 'Help' },
   ];

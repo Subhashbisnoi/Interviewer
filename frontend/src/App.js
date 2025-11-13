@@ -22,6 +22,7 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import CancellationAndRefund from './pages/CancellationAndRefund';
 import ShippingAndDelivery from './pages/ShippingAndDelivery';
 import ContactUs from './pages/ContactUs';
+import Pricing from './pages/Pricing';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
@@ -160,6 +161,10 @@ const AppContent = () => {
             <Route
               path="/contact"
               element={<ContactUs />}
+            />
+            <Route
+              path="/pricing"
+              element={<Pricing />}
             />
             <Route
               path="/interview"

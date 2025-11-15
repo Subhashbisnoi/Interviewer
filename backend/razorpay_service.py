@@ -22,18 +22,18 @@ razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 # Pricing configuration (in INR)
 PRICING = {
     "monthly": {
-        "amount": 49900,  # ₹499 (amount in paise)
+        "amount": 4900,  # ₹49 (amount in paise)
         "currency": "INR",
         "duration_days": 30,
         "name": "Premium Monthly",
         "description": "Unlimited AI interviews for 1 month"
     },
     "yearly": {
-        "amount": 499900,  # ₹4,999 (amount in paise) - ~17% discount
+        "amount": 49900,  # ₹499 (amount in paise) - ~15% discount
         "currency": "INR",
         "duration_days": 365,
         "name": "Premium Yearly",
-        "description": "Unlimited AI interviews for 1 year (Save ₹1,000)"
+        "description": "Unlimited AI interviews for 1 year (Save ₹89)"
     }
 }
 

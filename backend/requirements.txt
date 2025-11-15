@@ -12,6 +12,8 @@ httpx
 pdfplumber
 PyPDF2
 gtts
+groq
+google-auth
 openai
 langchain-openai
 langchain-core

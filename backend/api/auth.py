@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 import os
 import sys
 from dotenv import load_dotenv
+import logging
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from pydantic import BaseModel
@@ -50,6 +51,9 @@ class GitHubCredential(BaseModel):
     code: str
 
 router = APIRouter()
+
+# Use uvicorn logger when available so logs appear with server output
+logger = logging.getLogger("uvicorn.error")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -241,7 +245,14 @@ async def login(
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        # Handle any other unexpected errors
+        # Log unexpected exceptions for easier debugging
+        try:
+            logger.exception("Unhandled exception during login")
+        except Exception:
+            # Fallback to printing if logger fails
+            print("Unhandled exception during login:", e)
+
+        # Return a generic error to the client
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during login"

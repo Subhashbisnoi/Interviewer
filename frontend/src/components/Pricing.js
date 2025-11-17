@@ -19,8 +19,10 @@ const Pricing = () => {
 
   const fetchPlans = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/plans`);
+      const timestamp = new Date().getTime();
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/plans?_t=${timestamp}`);
       const data = await response.json();
+      console.log('Fetched plans data:', data);
       if (data.success) {
         setPlans(data);
       }
@@ -139,6 +141,102 @@ const Pricing = () => {
     );
   }
 
+  // If user is premium, show subscription management page
+  if (subscription?.tier === 'premium') {
+    const expiryDate = subscription.expires_at ? new Date(subscription.expires_at) : null;
+    const today = new Date();
+    const daysRemaining = expiryDate ? Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Crown className="h-10 w-10 text-gray-900" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Premium Subscription Active
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400">
+            Enjoy unlimited interviews and premium features
+          </p>
+        </div>
+
+        {/* Subscription Details */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-8 mb-8 border border-blue-200 dark:border-blue-800">
+          <div className="grid md:grid-cols-3 gap-6 text-center">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Current Plan</h3>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">Premium</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Status</h3>
+              <p className="text-2xl font-bold text-green-600">Active</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Days Remaining</h3>
+              <p className="text-2xl font-bold text-orange-600">
+                {daysRemaining > 0 ? `${daysRemaining} days` : 'Expired'}
+              </p>
+            </div>
+          </div>
+          
+          {expiryDate && (
+            <div className="mt-6 text-center">
+              <p className="text-gray-600 dark:text-gray-400">
+                Your subscription expires on {expiryDate.toLocaleDateString('en-IN', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Premium Features */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+            Your Premium Features
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {plans?.features?.premium?.features.map((feature, index) => (
+              <div key={index} className="flex items-center">
+                <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Renewal Options */}
+        {daysRemaining <= 7 && daysRemaining > 0 && (
+          <div className="mt-8 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200 mb-4">
+              🔔 Subscription Expiring Soon
+            </h3>
+            <p className="text-orange-700 dark:text-orange-300 mb-4">
+              Your premium subscription expires in {daysRemaining} days. Renew now to continue enjoying unlimited interviews.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => handleUpgrade('monthly')}
+                className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Renew Monthly (₹{plans?.plans?.monthly?.amount_inr})
+              </button>
+              <button
+                onClick={() => handleUpgrade('yearly')}
+                className="px-6 py-2 bg-orange-800 hover:bg-orange-900 text-white rounded-lg font-medium transition-colors"
+              >
+                Renew Yearly (₹{plans?.plans?.yearly?.amount_inr})
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       {/* Header */}
@@ -162,7 +260,20 @@ const Pricing = () => {
               <p className="text-xs text-blue-500 dark:text-blue-300 mt-1">
                 {subscription.tier === 'free' 
                   ? `${subscription.interviews_remaining || 0} interviews remaining this month`
-                  : `Unlimited interviews • Expires ${new Date(subscription.expires_at).toLocaleDateString()}`
+                  : subscription.expires_at ? (() => {
+                      const expiryDate = new Date(subscription.expires_at);
+                      const today = new Date();
+                      const diffTime = expiryDate.getTime() - today.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      
+                      if (diffDays > 0) {
+                        return `Unlimited interviews • ${diffDays} days remaining`;
+                      } else if (diffDays === 0) {
+                        return 'Unlimited interviews • Expires today';
+                      } else {
+                        return 'Unlimited interviews • Subscription expired';
+                      }
+                    })() : 'Unlimited interviews • Active'
                 }
               </p>
             </div>
@@ -222,7 +333,7 @@ const Pricing = () => {
           </div>
           
           <p className="text-primary-100 text-sm mb-6">
-            or ₹{plans?.plans?.yearly?.amount_inr}/year (Save ₹1,000)
+            or ₹{plans?.plans?.yearly?.amount_inr}/year (Save ₹{plans?.plans?.monthly?.amount_inr ? ((plans.plans.monthly.amount_inr * 12) - plans.plans.yearly.amount_inr).toFixed(0) : '89'})
           </p>
 
           <ul className="space-y-3 mb-8">

@@ -170,7 +170,7 @@ def send_password_reset_confirmation_email(recipient_email: str, recipient_name:
                   ✓ Your account is now secure with the new password
                 </p>
               </div>
-              
+               
               <p style="font-size: 14px; color: #6b7280; margin-bottom: 20px;">
                 If you didn't make this change, please contact our support team immediately.
               </p>

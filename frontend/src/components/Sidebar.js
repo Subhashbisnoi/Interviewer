@@ -245,10 +245,20 @@ const Sidebar = () => {
                   <Crown className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Premium Active</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Expires: {subscription?.subscription_expires_at ? 
-                      new Date(subscription.subscription_expires_at).toLocaleDateString() : 
-                      'Never'
-                    }
+                    {subscription?.expires_at ? (() => {
+                      const expiryDate = new Date(subscription.expires_at);
+                      const today = new Date();
+                      const diffTime = expiryDate.getTime() - today.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      
+                      if (diffDays > 0) {
+                        return `${diffDays} days remaining`;
+                      } else if (diffDays === 0) {
+                        return 'Expires today';
+                      } else {
+                        return 'Expired';
+                      }
+                    })() : 'Active'}
                   </p>
                 </div>
               ) : (
@@ -265,7 +275,7 @@ const Sidebar = () => {
                       className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
                     >
                       <DollarSign className="h-4 w-4 mr-1" />
-                      ₹499/month
+                      ₹49/month
                     </button>
                     
                     <button
@@ -273,8 +283,8 @@ const Sidebar = () => {
                       className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center"
                     >
                       <Crown className="h-4 w-4 mr-1" />
-                      ₹4,999/year
-                      <span className="ml-1 text-xs bg-green-500 px-1 rounded">Save 17%</span>
+                      ₹499/year
+                      <span className="ml-1 text-xs bg-green-500 px-1 rounded">Save 15%</span>
                     </button>
                   </div>
                   

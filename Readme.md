@@ -1,34 +1,52 @@
-# AI Interviewer
+# 🎯 AI Interviewer
 
-An AI-powered interview practice application that generates personalized questions based on your resume, provides instant feedback, and creates a personalized learning roadmap.
+An AI-powered interview practice platform that helps you ace your job interviews with personalized questions, instant feedback, and comprehensive learning roadmaps. Practice unlimited interviews with our premium subscription system.
 
-## Features
+## ✨ Features
 
-- **AI-Generated Questions**: Get personalized interview questions based on your resume and target role
-- **Interactive Interview**: Answer questions with a modern, user-friendly interface
-- **Instant Feedback**: Receive detailed feedback and scoring for each answer
-- **Learning Roadmap**: Get a personalized plan to improve your skills
-- **Resume Analysis**: Upload PDF resumes for AI analysis
-- **Session Management**: Track your interview sessions and progress
-- **User Authentication**: Secure login/signup with email or Google OAuth
-- **Google Sign-In**: Quick authentication using your Google account
+### 🤖 AI-Powered Interview Experience
+- **Smart Question Generation**: Get personalized interview questions based on your resume and target role
+- **Interactive Interview Interface**: Modern, intuitive interface with real-time responses
+- **Instant AI Feedback**: Receive detailed feedback and scoring for each answer
+- **Personalized Learning Roadmap**: Get customized improvement plans based on your performance
+
+### 💼 Professional Tools
+- **Resume Analysis**: Upload PDF resumes for AI-powered analysis and question generation
+- **Company Research**: AI extracts company-specific information for targeted interviews
+- **Session Management**: Track your interview sessions, progress, and improvement over time
+- **Interview History**: Access all your past interviews and feedback
+
+### 🔐 Authentication & Security
+- **Multi-Authentication**: Email/password, Google OAuth, and GitHub OAuth support
+- **Secure Sessions**: JWT-based authentication with 24-hour token lifetime
+- **User Profiles**: Personalized dashboards and settings
+
+### 💳 Subscription System
+- **Free Tier**: 5 interviews per month with basic feedback
+- **Premium Tier**: Unlimited interviews with advanced features for ₹49/month or ₹499/year
+- **Secure Payments**: Razorpay integration supporting cards, UPI, net banking, and wallets
+- **Live Payment Gateway**: Real-time subscription management and billing
 
 ## Architecture
 
 The application is built with a modern backend/frontend architecture:
 
-### Backend
-- **FastAPI**: High-performance Python web framework
-- **LangChain**: AI/LLM integration for question generation and feedback
-- **LangGraph**: Workflow orchestration for the interview process
-- **PDF Processing**: Resume text extraction using pdfplumber
+### Backend Stack
+- **FastAPI**: High-performance Python web framework with async support
+- **PostgreSQL**: Production-ready database with Neon cloud hosting
+- **LangChain & LangGraph**: AI/LLM integration for question generation and workflow orchestration
+- **Razorpay SDK**: Payment gateway integration for subscriptions
+- **JWT Authentication**: Secure token-based authentication system
+- **PDF Processing**: Advanced resume text extraction using pdfplumber and PyPDF2
+- **SQLAlchemy**: ORM with Alembic migrations for database management
 
-### Frontend
-- **React**: Modern JavaScript framework for the user interface
-- **Tailwind CSS**: Utility-first CSS framework for styling
-- **React Router**: Client-side routing
-- **React Dropzone**: File upload handling
-- **Lucide React**: Beautiful icons
+### Frontend Stack
+- **React 18**: Modern JavaScript framework with hooks and context
+- **Tailwind CSS**: Utility-first CSS framework with dark/light mode
+- **React Router DOM v6**: Advanced client-side routing with protected routes
+- **Razorpay Checkout**: Integrated payment interface
+- **Lucide React**: Beautiful, customizable icons
+- **Context API**: State management for authentication, themes, and notifications
 
 ## Project Structure
 
@@ -49,12 +67,32 @@ interviewer/
 └── README.md              # This file
 ```
 
+## 🚀 Live Demo
+
+- **Frontend**: [https://interviewer-frontend.vercel.app](https://interviewer-frontend.vercel.app)
+- **Backend API**: [https://ai-interviewer-backend.onrender.com](https://ai-interviewer-backend.onrender.com)
+- **API Documentation**: [https://ai-interviewer-backend.onrender.com/docs](https://ai-interviewer-backend.onrender.com/docs)
+
+## 💰 Pricing Plans
+
+| Feature | Free | Premium |
+|---------|------|---------|
+| Monthly Interviews | 5 | Unlimited |
+| Interview Feedback | Basic | Detailed with scores |
+| Learning Roadmap | Limited | Comprehensive |
+| Interview History | Last 5 | Full history |
+| Priority Support | ❌ | ✅ |
+| Advanced Analytics | ❌ | ✅ |
+| **Price** | Free | ₹49/month or ₹499/year |
+
 ## Prerequisites
 
-- Python 3.8+
-- Node.js 16+
+- Python 3.10+
+- Node.js 18+
 - npm or yarn
 - OpenAI API key (or compatible API)
+- Razorpay account (for payments)
+- PostgreSQL database (local or cloud)
 
 ## Setup Instructions
 
@@ -86,6 +124,10 @@ GOOGLE_CLIENT_ID=your-google-client-id-here
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_BASE_URL=https://openrouter.ai/api/v1  # Optional: for OpenRouter
 
+# Razorpay Configuration (for payments)
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
 # Environment
 ENVIRONMENT=development
 DEBUG=True
@@ -104,6 +146,12 @@ REACT_APP_API_URL=http://localhost:8000
 
 # Google OAuth (Optional - for Google Sign-In)
 REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id-here
+
+# GitHub OAuth (Optional - for GitHub Sign-In)
+REACT_APP_GITHUB_CLIENT_ID=your-github-client-id-here
+
+# Razorpay Configuration (for payments)
+REACT_APP_RAZORPAY_KEY_ID=your_razorpay_key_id
 ```
 
 #### Google OAuth Setup (Optional)
@@ -140,45 +188,102 @@ npm install
 
 The frontend will run on `http://localhost:3000`
 
-## Usage
+## 📖 Usage Guide
 
-1. **Sign Up/Login**: Create an account or sign in with email/password or Google
-2. **Upload Resume**: Upload your PDF resume
-3. **Set Target**: Specify your target role and company
-4. **Start Interview**: AI generates personalized questions
-5. **Answer Questions**: Provide detailed answers to each question
-6. **Get Feedback**: Receive instant feedback and scoring
-7. **View Roadmap**: Get a personalized learning plan
+### Getting Started
+1. **Sign Up/Login**: Create an account using email/password, Google, or GitHub OAuth
+2. **Choose Your Plan**: Start with free tier (5 interviews/month) or upgrade to premium
+3. **Upload Resume**: Upload your PDF resume for AI analysis
+4. **Set Interview Target**: Specify your target role, company, and experience level
 
-## API Endpoints
+### Interview Process
+5. **Start Interview**: AI generates personalized questions based on your profile
+6. **Answer Questions**: Provide detailed answers in the interactive interface
+7. **Real-time Feedback**: Get instant AI feedback and scoring for each response
+8. **Complete Session**: Finish the interview and view comprehensive results
+
+### Post-Interview
+9. **Review Feedback**: Analyze detailed feedback and improvement suggestions
+10. **Learning Roadmap**: Access your personalized skill development plan
+11. **Track Progress**: Monitor improvement across multiple interview sessions
+12. **Upgrade Anytime**: Access premium features for unlimited practice
+
+### Premium Features
+- **Upgrade from Profile**: Click your profile picture → Select monthly/yearly plan → Pay securely
+- **Unlimited Interviews**: Practice as much as you need without limits
+- **Advanced Analytics**: Track progress with detailed insights and metrics
+
+## 🔌 API Endpoints
 
 ### Authentication
-- `POST /auth/signup` - Create new user account
-- `POST /auth/login` - User login with email/password
+- `POST /auth/signup` - Create new user account with email/password
+- `POST /auth/login` - User login with credentials
 - `POST /auth/google` - Google OAuth authentication
-- `GET /auth/me` - Get current user profile
+- `POST /auth/github` - GitHub OAuth authentication
+- `GET /auth/me` - Get current user profile and subscription status
 
 ### Interview Management
-- `POST /interview/upload-resume` - Upload resume PDF
+- `POST /interview/upload-resume` - Upload resume PDF for analysis
 - `POST /interview/start` - Start new interview session
-- `POST /interview/submit-answers` - Submit interview answers
-- `GET /interview/session/{session_id}` - Get session details
-- `GET /interview/sessions` - List all sessions
+- `POST /interview/submit-answers` - Submit interview answers for feedback
+- `GET /interview/session/{session_id}` - Get detailed session information
+- `GET /interview/sessions` - List all user interview sessions
+- `GET /interview/history` - Get paginated interview history
 
-### Health Check
-- `GET /health` - API health status
+### Payment & Subscriptions
+- `GET /payment/plans` - Get available subscription plans
+- `POST /payment/create-order` - Create Razorpay payment order
+- `POST /payment/verify` - Verify payment and activate subscription
+- `GET /payment/subscription` - Get current subscription status
+- `POST /payment/cancel` - Cancel subscription
 
-## Development
+### Health & Monitoring
+- `GET /health` - API health status and system information
+
+## 🛠 Development
 
 ### Backend Development
-- The backend uses FastAPI with automatic API documentation
-- Visit `http://localhost:8000/docs` for interactive API docs
-- The workflow is orchestrated using LangGraph
+- **FastAPI Framework**: Auto-generated API docs at `/docs` and `/redoc`
+- **Database Management**: SQLAlchemy ORM with Alembic migrations
+- **Workflow Engine**: LangGraph orchestrates the AI interview process
+- **Payment Integration**: Razorpay SDK for subscription management
+- **Authentication**: JWT with 24-hour expiration and secure routes
 
 ### Frontend Development
-- Built with React 18 and modern hooks
-- Uses Tailwind CSS for responsive design
-- Component-based architecture for maintainability
+- **React 18**: Modern hooks-based architecture with context management
+- **Tailwind CSS**: Utility-first styling with custom components
+- **Responsive Design**: Mobile-first approach with dark/light mode support
+- **State Management**: React Context for auth, themes, and notifications
+- **Protected Routes**: Authentication-based access control
+
+### Local Development Setup
+
+```bash
+# Backend
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head  # Setup database
+python main.py
+
+# Frontend
+cd frontend
+npm install
+npm start
+```
+
+## 🚀 Deployment
+
+### Production Environment
+- **Frontend**: Deployed on Vercel with automatic GitHub deployments
+- **Backend**: Hosted on Render with Docker containerization
+- **Database**: Neon PostgreSQL with connection pooling
+- **Payments**: Live Razorpay integration with webhook support
+
+### Environment Configuration
+- **Development**: Local setup with SQLite/PostgreSQL
+- **Staging**: Test environment with Razorpay test keys
+- **Production**: Live environment with secure configurations
 
 ## Workflow
 
@@ -206,11 +311,25 @@ This project is licensed under the MIT License.
 
 For issues and questions, please open an issue on the GitHub repository.
 
-## Future Enhancements
+## 🎯 Current Features (Completed)
 
-- Database integration for persistent storage
-- User authentication and profiles
-- Interview history and analytics
-- Multiple interview formats
-- Video interview support
-- Integration with learning platforms
+- ✅ **Full Authentication System**: Email/password, Google OAuth, GitHub OAuth
+- ✅ **Premium Subscription System**: Razorpay integration with live payments
+- ✅ **AI Interview Engine**: LangGraph-powered workflow with personalized questions
+- ✅ **Resume Analysis**: Advanced PDF processing with company research
+- ✅ **Real-time Feedback**: Instant AI scoring and improvement suggestions
+- ✅ **Learning Roadmaps**: Personalized skill development plans
+- ✅ **Session Management**: Complete interview history and progress tracking
+- ✅ **Responsive UI**: Mobile-friendly interface with dark/light modes
+- ✅ **Production Deployment**: Vercel (frontend) + Render (backend) + Neon (database)
+
+## 🚀 Future Enhancements
+
+- 📹 **Video Interview Support**: Practice with AI-powered video interviews
+- 🎤 **Voice Recognition**: Answer questions using speech-to-text
+- 📊 **Advanced Analytics**: Detailed performance metrics and industry benchmarks
+- 🏢 **Company-Specific Prep**: Tailored questions for specific companies
+- 👥 **Group Interviews**: Practice panel and group interview scenarios
+- 🎓 **Learning Integration**: Connect with Coursera, Udemy, and other platforms
+- 📱 **Mobile App**: Native iOS and Android applications
+- 🌍 **Multi-language Support**: Interview practice in multiple languages

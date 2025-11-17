@@ -13,16 +13,11 @@ import Result from './components/Result';
 import ChatHistory from './components/ChatHistory';
 import PinnedResults from './components/PinnedResults';
 import Leaderboard from './components/Leaderboard';
+import Pricing from './components/Pricing';
 import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Help from './pages/Help';
 import Settings from './pages/Settings';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsAndConditions from './pages/TermsAndConditions';
-import CancellationAndRefund from './pages/CancellationAndRefund';
-import ShippingAndDelivery from './pages/ShippingAndDelivery';
-import ContactUs from './pages/ContactUs';
-import Pricing from './pages/Pricing';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
@@ -73,6 +68,8 @@ const AppContent = () => {
   const { user } = useAuth();
   const location = useLocation();
 
+
+
   const startNewInterview = (data) => {
     setInterviewData(data);
     setCurrentSession(null);
@@ -94,6 +91,7 @@ const AppContent = () => {
         {!isInterviewPage && <Header />}
         <main className={isInterviewPage ? 'flex-1' : 'flex-1 container mx-auto px-4 py-8'}>
           <Routes>
+            {/* Main Pages */}
             <Route 
               path="/" 
               element={<Home onStartInterview={startNewInterview} />} 
@@ -141,26 +139,6 @@ const AppContent = () => {
             <Route
               path="/leaderboard"
               element={<Leaderboard />}
-            />
-            <Route
-              path="/privacy-policy"
-              element={<PrivacyPolicy />}
-            />
-            <Route
-              path="/terms"
-              element={<TermsAndConditions />}
-            />
-            <Route
-              path="/refund-policy"
-              element={<CancellationAndRefund />}
-            />
-            <Route
-              path="/shipping-policy"
-              element={<ShippingAndDelivery />}
-            />
-            <Route
-              path="/contact"
-              element={<ContactUs />}
             />
             <Route
               path="/pricing"

@@ -7,25 +7,12 @@ import secrets
 import random
 import string
 from sqlalchemy.orm import Session
-from passlib.hash import sha256_crypt, bcrypt  # Support both
-from passlib.context import CryptContext  # Re-add for flexibility
+from passlib.context import CryptContext
 import os
 import sys
 from dotenv import load_dotenv
-# Google OAuth imports - optional for deployment
-try:
-    from google.auth.transport import requests
-    from google.oauth2 import id_token
-    GOOGLE_AUTH_AVAILABLE = True
-except ImportError:
-    GOOGLE_AUTH_AVAILABLE = False
-    # Create dummy classes for when Google auth is not available
-    class requests:
-        pass
-    class id_token:
-        @staticmethod
-        def verify_oauth2_token(*args, **kwargs):
-            raise HTTPException(status_code=501, detail="Google OAuth not configured")
+from google.auth.transport import requests
+from google.oauth2 import id_token
 from pydantic import BaseModel
 import httpx
 import json
@@ -40,32 +27,18 @@ load_dotenv()
 from database import get_db, SessionLocal
 from models import User, InterviewSession, ChatMessage, OTP, ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest, MessageResponse
 from schemas.auth import UserCreate, UserInDB, Token, TokenData, UserResponse
-# Email utilities - optional for deployment
-try:
-    from email_utils import send_otp_email, send_password_reset_confirmation_email
-    EMAIL_UTILS_AVAILABLE = True
-except ImportError:
-    EMAIL_UTILS_AVAILABLE = False
-    # Create dummy functions when email utils are not available
-    def send_otp_email(*args, **kwargs):
-        return {"status": "error", "message": "Email service not configured"}
-    def send_password_reset_confirmation_email(*args, **kwargs):
-        return {"status": "error", "message": "Email service not configured"}
+from email_utils import send_otp_email, send_password_reset_confirmation_email
 
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-# Multi-scheme password context - support both old (bcrypt) and new (sha256_crypt) passwords
-# This allows gradual migration without breaking existing accounts
-pwd_context = CryptContext(
-    schemes=["sha256_crypt", "bcrypt"],  # sha256_crypt for new, bcrypt for old
-    deprecated="auto"  # Automatically mark bcrypt as deprecated
-)
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
@@ -79,33 +52,10 @@ class GitHubCredential(BaseModel):
 router = APIRouter()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash - supports both bcrypt and sha256_crypt"""
-    try:
-        # CryptContext will auto-detect which scheme was used
-        return pwd_context.verify(plain_password, hashed_password)
-    except Exception as e:
-        print(f"Password verification error: {e}")
-        return False
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Hash a password using sha256_crypt (default scheme)"""
-    try:
-        # Truncate password to 72 bytes for bcrypt compatibility if needed
-        # sha256_crypt doesn't have this limit, but we keep it for consistency
-        if len(password.encode('utf-8')) > 72:
-            password = password[:72]
-        
-        # Use sha256_crypt for all new passwords
-        result = pwd_context.hash(password)
-        return result
-    except Exception as e:
-        print(f"Error hashing password: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Password hashing failed: {str(e)}"
-        )
+    return pwd_context.hash(password)
 
 def get_user(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
@@ -136,11 +86,14 @@ def create_user(db: Session, user_data: UserCreate) -> User:
         return db_user
     except Exception as e:
         db.rollback()
-        print(f"Database error creating user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}"
+            detail="Failed to create user"
         )
+    user = get_user(db, email)
+    if not user or not verify_password(password, user.hashed_password):
+        return None
+    return user
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -153,28 +106,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
-    """Authenticate user and auto-upgrade deprecated password hashes"""
     user = get_user(db, email)
-    if not user:
+    if not user or not verify_password(password, user.hashed_password):
         return None
-    
-    # Verify password
-    if not verify_password(password, user.hashed_password):
-        return None
-    
-    # Check if password needs rehashing (bcrypt -> sha256_crypt migration)
-    if pwd_context.needs_update(user.hashed_password):
-        print(f"Auto-upgrading password hash for user: {email}")
-        try:
-            # Rehash with new algorithm
-            user.hashed_password = get_password_hash(password)
-            db.commit()
-            print(f"Successfully upgraded password hash for user: {email}")
-        except Exception as e:
-            print(f"Failed to upgrade password hash: {e}")
-            db.rollback()
-            # Don't fail authentication if rehashing fails
-    
     return user
 
 async def get_current_user(
@@ -236,16 +170,10 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     Create a new user account
     """
     try:
-        # Argon2 doesn't have length limitations like bcrypt
-        # Just basic validation for reasonable password length
-        if len(user_data.password) < 6:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Password must be at least 6 characters long."
-            )
-
         # Create new user using the helper function
-        db_user = create_user(db, user_data)        # Create access token
+        db_user = create_user(db, user_data)
+        
+        # Create access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user_data.email}, expires_delta=access_token_expires
@@ -266,12 +194,9 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         # Handle any other unexpected errors
-        print(f"Signup error: {str(e)}")  # Add logging
-        import traceback
-        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during signup: {str(e)}"
+            detail="An error occurred during signup"
         )
 
 @router.post("/login", response_model=Token)
@@ -317,28 +242,13 @@ async def login(
         raise
     except Exception as e:
         # Handle any other unexpected errors
-        print(f"Login error: {str(e)}")  # Add logging
-        import traceback
-        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred during login: {str(e)}"
+            detail="An error occurred during login"
         )
 
 def verify_google_token(credential: str) -> dict:
     """Verify Google ID token and return user info"""
-    if not GOOGLE_AUTH_AVAILABLE:
-        raise HTTPException(
-            status_code=501, 
-            detail="Google OAuth libraries are not installed"
-        )
-    
-    if not GOOGLE_CLIENT_ID:
-        raise HTTPException(
-            status_code=501, 
-            detail="Google OAuth is not configured - GOOGLE_CLIENT_ID environment variable is missing"
-        )
-        
     try:
         # Verify the token
         idinfo = id_token.verify_oauth2_token(
@@ -436,18 +346,6 @@ async def google_auth(
     """
     Authenticate with Google OAuth
     """
-    if not GOOGLE_AUTH_AVAILABLE:
-        raise HTTPException(
-            status_code=501, 
-            detail="Google OAuth libraries are not installed"
-        )
-    
-    if not GOOGLE_CLIENT_ID:
-        raise HTTPException(
-            status_code=501, 
-            detail="Google OAuth is not configured - GOOGLE_CLIENT_ID environment variable is missing"
-        )
-        
     try:
         # Verify the Google token
         user_info = verify_google_token(google_data.credential)
@@ -768,148 +666,5 @@ async def reset_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while resetting password"
         )
-
-
-# Profile Management Endpoints
-
-class ProfileUpdateRequest(BaseModel):
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    location: Optional[str] = None
-    current_role: Optional[str] = None
-    experience_years: Optional[int] = None
-    linkedin_url: Optional[str] = None
-    github_url: Optional[str] = None
-    portfolio_url: Optional[str] = None
-    skills: Optional[list] = None
-    bio: Optional[str] = None
-    preferred_industries: Optional[list] = None
-
-class ProfileResponse(BaseModel):
-    id: int
-    email: str
-    full_name: Optional[str]
-    phone: Optional[str]
-    location: Optional[str]
-    current_role: Optional[str]
-    experience_years: Optional[int]
-    linkedin_url: Optional[str]
-    github_url: Optional[str]
-    portfolio_url: Optional[str]
-    skills: Optional[list]
-    bio: Optional[str]
-    preferred_industries: Optional[list]
-    profile_picture_url: Optional[str]
-    created_at: datetime
-    completion_percentage: int
-
-@router.get("/profile", response_model=ProfileResponse)
-async def get_profile(
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """Get current user's profile with completion percentage."""
-    
-    # Calculate profile completion percentage
-    fields = [
-        current_user.full_name,
-        current_user.phone,
-        current_user.location,
-        current_user.current_role,
-        current_user.experience_years,
-        current_user.linkedin_url,
-        current_user.github_url,
-        current_user.portfolio_url,
-        current_user.skills,
-        current_user.bio,
-        current_user.preferred_industries,
-    ]
-    
-    completed_fields = sum(1 for field in fields if field)
-    total_fields = len(fields)
-    completion_percentage = int((completed_fields / total_fields) * 100)
-    
-    return {
-        "id": current_user.id,
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "phone": current_user.phone,
-        "location": current_user.location,
-        "current_role": current_user.current_role,
-        "experience_years": current_user.experience_years,
-        "linkedin_url": current_user.linkedin_url,
-        "github_url": current_user.github_url,
-        "portfolio_url": current_user.portfolio_url,
-        "skills": current_user.skills,
-        "bio": current_user.bio,
-        "preferred_industries": current_user.preferred_industries,
-        "profile_picture_url": current_user.profile_picture_url,
-        "created_at": current_user.created_at,
-        "completion_percentage": completion_percentage
-    }
-
-@router.put("/profile", response_model=ProfileResponse)
-async def update_profile(
-    profile_data: ProfileUpdateRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db)
-):
-    """Update current user's profile."""
-    
-    try:
-        # Update only provided fields
-        update_data = profile_data.dict(exclude_unset=True)
-        
-        for field, value in update_data.items():
-            setattr(current_user, field, value)
-        
-        db.commit()
-        db.refresh(current_user)
-        
-        # Calculate profile completion percentage
-        fields = [
-            current_user.full_name,
-            current_user.phone,
-            current_user.location,
-            current_user.current_role,
-            current_user.experience_years,
-            current_user.linkedin_url,
-            current_user.github_url,
-            current_user.portfolio_url,
-            current_user.skills,
-            current_user.bio,
-            current_user.preferred_industries,
-        ]
-        
-        completed_fields = sum(1 for field in fields if field)
-        total_fields = len(fields)
-        completion_percentage = int((completed_fields / total_fields) * 100)
-        
-        return {
-            "id": current_user.id,
-            "email": current_user.email,
-            "full_name": current_user.full_name,
-            "phone": current_user.phone,
-            "location": current_user.location,
-            "current_role": current_user.current_role,
-            "experience_years": current_user.experience_years,
-            "linkedin_url": current_user.linkedin_url,
-            "github_url": current_user.github_url,
-            "portfolio_url": current_user.portfolio_url,
-            "skills": current_user.skills,
-            "bio": current_user.bio,
-            "preferred_industries": current_user.preferred_industries,
-            "profile_picture_url": current_user.profile_picture_url,
-            "created_at": current_user.created_at,
-            "completion_percentage": completion_percentage
-        }
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update profile: {str(e)}"
-        )
-
 
 

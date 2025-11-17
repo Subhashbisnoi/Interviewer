@@ -11,9 +11,9 @@ export const AuthProvider = ({ children }) => {
   const [sessionWarning, setSessionWarning] = useState(false);
   const navigate = useNavigate();
 
-  // Token expiration check (30 minutes = 1800000 ms)
-  const TOKEN_LIFETIME = 30 * 60 * 1000; // 30 minutes
-  const WARNING_BEFORE_EXPIRY = 5 * 60 * 1000; // Show warning 5 minutes before expiry
+  // Token expiration check (24 hours = 1440 minutes = 86400000 ms)
+  const TOKEN_LIFETIME = 1440 * 60 * 1000; // 24 hours (matches backend)
+  const WARNING_BEFORE_EXPIRY = 30 * 60 * 1000; // Show warning 30 minutes before expiry
 
   useEffect(() => {
     // Set up unauthorized handler for API client

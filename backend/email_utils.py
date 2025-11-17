@@ -5,6 +5,8 @@ from email.mime.multipart import MIMEMultipart
 from typing import Optional
 import os
 from dotenv import load_dotenv
+import logging
+import traceback
 
 load_dotenv()
 
@@ -14,6 +16,8 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_FROM = os.getenv("EMAIL_FROM", EMAIL_USER)
+
+logger = logging.getLogger("uvicorn.error")
 
 def send_otp_email(recipient_email: str, otp_code: str, recipient_name: Optional[str] = None) -> bool:
     """
@@ -29,10 +33,13 @@ def send_otp_email(recipient_email: str, otp_code: str, recipient_name: Optional
     """
     # For development, if email credentials are not configured, just log the OTP
     if not EMAIL_USER or not EMAIL_PASSWORD:
+      try:
+        logger.info("[DEVELOPMENT MODE] OTP for %s: %s", recipient_email, otp_code)
+        logger.info("[DEVELOPMENT MODE] Recipient: %s", recipient_name or 'User')
+      except Exception:
         print(f"[DEVELOPMENT MODE] OTP for {recipient_email}: {otp_code}")
         print(f"[DEVELOPMENT MODE] Recipient: {recipient_name or 'User'}")
-        return True  # Return True to allow testing without email setup
-        return False
+      return True  # Return True to allow testing without email setup
     
     try:
         # Create message
@@ -124,8 +131,13 @@ def send_otp_email(recipient_email: str, otp_code: str, recipient_name: Optional
         return True
         
     except Exception as e:
+      # Log full traceback for easier debugging
+      try:
+        logger.exception("Failed to send OTP email to %s", recipient_email)
+      except Exception:
         print(f"Failed to send OTP email to {recipient_email}: {str(e)}")
-        return False
+        traceback.print_exc()
+      return False
 
 def send_password_reset_confirmation_email(recipient_email: str, recipient_name: Optional[str] = None) -> bool:
     """
@@ -139,9 +151,13 @@ def send_password_reset_confirmation_email(recipient_email: str, recipient_name:
         bool: True if email sent successfully, False otherwise
     """
     if not EMAIL_USER or not EMAIL_PASSWORD:
+      try:
+        logger.info("[DEVELOPMENT MODE] Password reset confirmation sent to %s", recipient_email)
+        logger.info("[DEVELOPMENT MODE] Recipient: %s", recipient_name or 'User')
+      except Exception:
         print(f"[DEVELOPMENT MODE] Password reset confirmation sent to {recipient_email}")
         print(f"[DEVELOPMENT MODE] Recipient: {recipient_name or 'User'}")
-        return True  # Return True to allow testing without email setup
+      return True  # Return True to allow testing without email setup
     
     try:
         # Create message
@@ -223,5 +239,9 @@ def send_password_reset_confirmation_email(recipient_email: str, recipient_name:
         return True
         
     except Exception as e:
+      try:
+        logger.exception("Failed to send confirmation email to %s", recipient_email)
+      except Exception:
         print(f"Failed to send confirmation email to {recipient_email}: {str(e)}")
-        return False
+        traceback.print_exc()
+      return False

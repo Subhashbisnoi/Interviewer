@@ -8,6 +8,7 @@ import random
 import string
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 import os
 import sys
 from dotenv import load_dotenv
@@ -111,8 +112,39 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = get_user(db, email)
-    if not user or not verify_password(password, user.hashed_password):
+    if not user:
         return None
+
+    # Try normal verification first. If the stored hash is unknown to passlib
+    # (e.g., legacy/plaintext value), handle gracefully and attempt migration.
+    try:
+        if not verify_password(password, user.hashed_password):
+            return None
+    except UnknownHashError:
+        # Log and attempt a simple fallback: if the stored value equals the
+        # plaintext password (legacy insecure storage), re-hash and migrate it.
+        try:
+            logger.warning("Unknown password hash for user %s - attempting legacy fallback", email)
+        except Exception:
+            print(f"Unknown password hash for user {email} - attempting legacy fallback")
+
+        # Fallback: if stored password equals provided plaintext, migrate it
+        try:
+            if user.hashed_password == password:
+                # Re-hash the plaintext and update the DB
+                user.hashed_password = get_password_hash(password)
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            else:
+                return None
+        except Exception as e:
+            try:
+                logger.exception("Failed to migrate legacy password for user %s: %s", email, str(e))
+            except Exception:
+                print("Failed to migrate legacy password for user", email, str(e))
+            return None
+
     return user
 
 async def get_current_user(

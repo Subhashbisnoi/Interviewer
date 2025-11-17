@@ -47,7 +47,8 @@ else:
         "http://127.0.0.1:3015",
         "https://interviewer-tan.vercel.app",
         "https://interviewer-tan.vercel.app/",  # With trailing slash
-        "https://interviewer.vercel.app",  # Alternative domain if you change it
+        "https://interviewer.vercel.app",
+        "https://interviewforge.live"  # Alternative domain if you change it
     ]
 
 app.add_middleware(

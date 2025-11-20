@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from typing import Optional, Annotated
+from typing import Optional
 import secrets
 import random
 import string
@@ -17,7 +17,6 @@ from google.auth.transport import requests
 from google.oauth2 import id_token
 from pydantic import BaseModel
 import httpx
-import json
 
 # Add the parent directory to sys.path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

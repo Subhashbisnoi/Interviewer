@@ -18,6 +18,11 @@ import Dashboard from './pages/Dashboard';
 import About from './pages/About';
 import Help from './pages/Help';
 import Settings from './pages/Settings';
+import ContactUs from './pages/ContactUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
+import CancellationAndRefund from './pages/CancellationAndRefund';
+import ShippingAndDelivery from './pages/ShippingAndDelivery';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
@@ -143,6 +148,26 @@ const AppContent = () => {
             <Route
               path="/pricing"
               element={<Pricing />}
+            />
+            <Route
+              path="/contact"
+              element={<ContactUs />}
+            />
+            <Route
+              path="/privacy-policy"
+              element={<PrivacyPolicy />}
+            />
+            <Route
+              path="/terms"
+              element={<TermsAndConditions />}
+            />
+            <Route
+              path="/refund-policy"
+              element={<CancellationAndRefund />}
+            />
+            <Route
+              path="/shipping-policy"
+              element={<ShippingAndDelivery />}
             />
             <Route
               path="/interview"

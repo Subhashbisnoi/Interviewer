@@ -1,5 +1,6 @@
 import React from 'react';
 import { Target, Users, Award, Zap } from 'lucide-react';
+import GoogleAd from '../components/GoogleAd';
 
 const About = () => {
   return (
@@ -125,6 +126,15 @@ const About = () => {
           <button className="px-8 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-semibold">
             Get Started Now
           </button>
+        </div>
+        
+        {/* Google AdSense - Bottom Banner */}
+        <div className="mt-8">
+          <GoogleAd 
+            slot="5678901234"
+            format="horizontal"
+            responsive={true}
+          />
         </div>
       </div>
     </div>

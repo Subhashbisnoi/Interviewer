@@ -5,6 +5,7 @@ import { Upload, FileText, Brain, User, BarChart3, ArrowRight } from 'lucide-rea
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthModal from './auth/AuthModal';
+import GoogleAd from './GoogleAd';
 
 const Home = ({ onStartInterview }) => {
   const navigate = useNavigate();
@@ -317,6 +318,15 @@ const Home = ({ onStartInterview }) => {
             Get a personalized plan to improve your skills and interview performance
           </p>
         </div>
+      </div>
+
+      {/* Google AdSense - Horizontal Banner */}
+      <div className="mb-8">
+        <GoogleAd 
+          slot="1234567890"
+          format="horizontal"
+          responsive={true}
+        />
       </div>
 
       <AuthModal

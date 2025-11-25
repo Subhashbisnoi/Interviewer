@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { DashboardSkeleton } from '../components/LoadingSkeleton';
+import GoogleAd from '../components/GoogleAd';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -313,6 +314,15 @@ const Dashboard = () => {
             </div>
           </div>
         )}
+        
+        {/* Google AdSense - Bottom Banner */}
+        <div className="mt-8">
+          <GoogleAd 
+            slot="2345678901"
+            format="horizontal"
+            responsive={true}
+          />
+        </div>
       </div>
     </div>
   );

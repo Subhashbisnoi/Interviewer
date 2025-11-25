@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Trophy, Medal, Award, TrendingUp, Users, Filter, Crown, Star, Target, Zap } from 'lucide-react';
+import GoogleAd from './GoogleAd';
 
 const Leaderboard = () => {
   const { user } = useAuth();
@@ -370,6 +371,15 @@ const Leaderboard = () => {
             </p>
           </div>
         </div>
+      </div>
+      
+      {/* Google AdSense - Bottom Banner */}
+      <div className="mt-8">
+        <GoogleAd 
+          slot="4567890123"
+          format="horizontal"
+          responsive={true}
+        />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, X, Zap, Crown, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import GoogleAd from '../components/GoogleAd';
 
 const Pricing = () => {
   const [plans, setPlans] = useState(null);
@@ -400,6 +401,15 @@ const Pricing = () => {
             </p>
           </details>
         </div>
+      </div>
+      
+      {/* Google AdSense - Bottom Banner */}
+      <div className="mt-12">
+        <GoogleAd 
+          slot="3456789012"
+          format="horizontal"
+          responsive={true}
+        />
       </div>
     </div>
   );

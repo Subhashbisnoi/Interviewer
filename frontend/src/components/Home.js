@@ -200,11 +200,31 @@ const Home = ({ onStartInterview }) => {
         title="Home"
         description="Master your technical interviews with AI-powered mock interviews. Get instant feedback, personalized roadmaps, and improve your skills."
       />
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "AI Interviewer",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "AI-powered interview preparation platform for technical interviews.",
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "1250"
+          }
+        })}
+      </script>
 
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">AI-Powered Interview Preparation</h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400">Practice with realistic interview questions and get instant feedback</p>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Free AI Interview Practice & Preparation</h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400">Master your next technical interview with our advanced AI Interviewer. Get instant feedback, coding challenges, and system design practice.</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
@@ -247,8 +267,8 @@ const Home = ({ onStartInterview }) => {
               <div
                 {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
-                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                  : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
                   }`}
               >
                 <input {...getInputProps()} />

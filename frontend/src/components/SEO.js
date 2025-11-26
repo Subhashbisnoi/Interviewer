@@ -3,8 +3,8 @@ import { Helmet } from 'react-helmet';
 
 const SEO = ({ title, description, keywords, image, url }) => {
     const siteTitle = 'AI Interviewer';
-    const defaultDescription = 'Practice technical interviews with AI-powered feedback. Get real-time analysis, roadmap for improvement, and master your next job interview.';
-    const defaultKeywords = 'AI interview, technical interview practice, mock interview, coding interview, system design interview, interview feedback';
+    const defaultDescription = 'The #1 AI Interviewer. Practice coding, system design, and behavioral interviews with advanced AI. Get instant feedback, personalized roadmaps, and rank higher in your next job interview.';
+    const defaultKeywords = 'AI interview, free ai interview, interview prep, mock interview online, technical interview practice, coding interview, system design interview, interview feedback, interviewforge';
     const defaultImage = 'https://interviewforge.live/og-image.png';
     const siteUrl = 'https://interviewforge.live';
 

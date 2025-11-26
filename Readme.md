@@ -1,6 +1,15 @@
-# 🎯 AI Interviewer
+# 🎯 AI Interviewer - InterviewForge
 
-An AI-powered interview practice platform that helps you ace your job interviews with personalized questions, instant feedback, and comprehensive learning roadmaps. Practice unlimited interviews with our premium subscription system.
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![React](https://img.shields.io/badge/react-18.0+-61DAFB.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+
+**The #1 Free AI Interview Practice Platform.**
+
+InterviewForge is an advanced **AI-powered interview preparation platform** that helps you ace your job interviews. Practice **coding**, **system design**, and **behavioral interviews** with our intelligent AI agent. Get **instant feedback**, personalized **learning roadmaps**, and master your technical skills to land your dream job.
+
+Practice unlimited mock interviews online for free or upgrade for advanced analytics.
 
 ## ✨ Features
 
@@ -69,7 +78,8 @@ interviewer/
 
 ## 🚀 Live Demo
 
-- **Frontend**: [https://interviewer-frontend.vercel.app](https://interviewer-frontend.vercel.app)
+- **Live Site**: [https://interviewforge.live](https://interviewforge.live)
+- **Frontend**: [https://interviewer-frontend.vercel.app](https://interviewer-frontend.vercel.app) (Development)
 - **Backend API**: [https://ai-interviewer-backend.onrender.com](https://ai-interviewer-backend.onrender.com)
 - **API Documentation**: [https://ai-interviewer-backend.onrender.com/docs](https://ai-interviewer-backend.onrender.com/docs)
 
@@ -93,6 +103,30 @@ interviewer/
 - OpenAI API key (or compatible API)
 - Razorpay account (for payments)
 - PostgreSQL database (local or cloud)
+
+## ⚡ Quick Start
+
+Get up and running in minutes:
+
+1. **Clone the repo**:
+   ```bash
+   git clone https://github.com/Subhashbisnoi/Interviewer.git
+   cd Interviewer
+   ```
+
+2. **Install & Run Backend**:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ./start.sh
+   ```
+
+3. **Install & Run Frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
 
 ## Setup Instructions
 

@@ -19,8 +19,20 @@ const Footer = () => {
               </div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Interviewer</h2>
             </div>
+            {/* AdSense Placeholder */}
+            <div className="my-4">
+              <ins className="adsbygoogle"
+                style={{ display: 'block' }}
+                data-ad-client="ca-pub-3485450755973148"
+                data-ad-slot="YOUR_AD_SLOT_ID"
+                data-ad-format="auto"
+                data-full-width-responsive="true"></ins>
+              <script>
+                (window.adsbygoogle = window.adsbygoogle || []).push({ });
+              </script>
+            </div>
             <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
-              Practice and ace your job interviews with AI-powered mock interviews. 
+              Practice and ace your job interviews with AI-powered mock interviews.
               Get personalized feedback and improve your skills with real-time analysis.
             </p>
             <div className="flex space-x-4">

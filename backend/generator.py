@@ -90,6 +90,12 @@ Generate ONLY the 3 final questions, nothing else.
 
     response = structured_generator.invoke(messages)
 
+    # Handle response whether it's an object (Pydantic model) or a dictionary
+    if isinstance(response, dict):
+        questions = response.get("questions", [])
+    else:
+        questions = getattr(response, "questions", [])
+
     return {
-        "question": response.questions
+        "question": questions
     }

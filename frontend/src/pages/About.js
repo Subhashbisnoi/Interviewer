@@ -1,10 +1,17 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
 import { Target, Users, Award, Zap } from 'lucide-react';
 import GoogleAd from '../components/GoogleAd';
 
 const About = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <SEO
+        title="About Us"
+        description="Learn about AI Interviewer's mission to democratize technical interview preparation with advanced AI technology."
+        url="/about"
+      />
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* Hero Section */}
         <div className="text-center mb-16">
@@ -25,8 +32,8 @@ const About = () => {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Our Mission</h2>
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                At AI Interviewer, we believe that everyone deserves the opportunity to succeed in their career journey. 
-                Our mission is to democratize interview preparation by providing accessible, AI-powered tools that help 
+                At AI Interviewer, we believe that everyone deserves the opportunity to succeed in their career journey.
+                Our mission is to democratize interview preparation by providing accessible, AI-powered tools that help
                 job seekers practice, improve, and gain confidence before their real interviews.
               </p>
             </div>
@@ -71,16 +78,16 @@ const About = () => {
           <h2 className="text-3xl font-bold mb-6">Our Story</h2>
           <div className="space-y-4 text-lg">
             <p>
-              AI Interviewer was born from the recognition that traditional interview preparation methods 
+              AI Interviewer was born from the recognition that traditional interview preparation methods
               are often expensive, time-consuming, and not accessible to everyone.
             </p>
             <p>
-              We set out to create a platform that combines cutting-edge AI technology with best practices 
-              in interview coaching, making high-quality interview preparation available to job seekers 
+              We set out to create a platform that combines cutting-edge AI technology with best practices
+              in interview coaching, making high-quality interview preparation available to job seekers
               anywhere, anytime.
             </p>
             <p>
-              Today, we're proud to help thousands of job seekers practice their interview skills, 
+              Today, we're proud to help thousands of job seekers practice their interview skills,
               gain confidence, and land their dream jobs.
             </p>
           </div>
@@ -127,10 +134,10 @@ const About = () => {
             Get Started Now
           </button>
         </div>
-        
+
         {/* Google AdSense - Bottom Banner */}
         <div className="mt-8">
-          <GoogleAd 
+          <GoogleAd
             slot="5678901234"
             format="horizontal"
             responsive={true}

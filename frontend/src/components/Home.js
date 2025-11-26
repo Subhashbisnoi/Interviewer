@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthModal from './auth/AuthModal';
 import GoogleAd from './GoogleAd';
+import SEO from './SEO';
 
 const Home = ({ onStartInterview }) => {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ const Home = ({ onStartInterview }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!resumeFile) {
       setError('Please upload a resume');
       return;
@@ -81,10 +82,10 @@ const Home = ({ onStartInterview }) => {
   const startInterview = async (data) => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       toast.info('Uploading and analyzing your resume...');
-      
+
       // Create FormData for file upload
       const uploadData = new FormData();
       uploadData.append('file', data.resumeFile);
@@ -93,12 +94,12 @@ const Home = ({ onStartInterview }) => {
       const token = localStorage.getItem('token');
       const headers = {};
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers['Authorization'] = `Bearer ${token} `;
       }
 
       // Upload resume and extract text
       const uploadResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/upload-resume`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'} /interview/upload - resume`,
         {
           method: 'POST',
           headers,
@@ -118,7 +119,7 @@ const Home = ({ onStartInterview }) => {
       }
 
       const { resume_text } = await uploadResponse.json();
-      
+
       if (!resume_text) {
         throw new Error('Failed to extract text from resume');
       }
@@ -127,7 +128,7 @@ const Home = ({ onStartInterview }) => {
 
       // Start interview with extracted resume text
       const interviewResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/start`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'} /interview/start`,
         {
           method: 'POST',
           headers: {
@@ -165,7 +166,7 @@ const Home = ({ onStartInterview }) => {
       });
 
       toast.success('Interview ready! Let\'s begin!');
-      
+
       // Navigate to interview page
       navigate('/interview');
     } catch (err) {
@@ -194,149 +195,155 @@ const Home = ({ onStartInterview }) => {
   }, [user, showAuthModal]);
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">AI-Powered Interview Preparation</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">Practice with realistic interview questions and get instant feedback</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <SEO
+        title="Home"
+        description="Master your technical interviews with AI-powered mock interviews. Get instant feedback, personalized roadmaps, and improve your skills."
+      />
 
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Target Role
-            </label>
-            <input
-              type="text"
-              name="role"
-              id="role"
-              value={formData.role}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="e.g., Software Engineer, Data Scientist"
-              required
-            />
-          </div>
+      <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">AI-Powered Interview Preparation</h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400">Practice with realistic interview questions and get instant feedback</p>
+        </div>
 
-          <div>
-            <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Target Company (Optional)
-            </label>
-            <input
-              type="text"
-              name="company"
-              id="company"
-              value={formData.company}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              placeholder="e.g., Google, Microsoft"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Upload Resume (PDF)
-            </label>
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                isDragActive 
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
-                  : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
-              }`}
-            >
-              <input {...getInputProps()} />
-              {resumeFile ? (
-                <div className="space-y-2">
-                  <FileText className="mx-auto h-12 w-12 text-green-500" />
-                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-                    {resumeFile.name}
-                  </p>
-                  <p className="text-xs text-green-500 dark:text-green-400">
-                    Click or drag to replace
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Upload className="h-10 w-10 mx-auto text-gray-400 dark:text-gray-500" />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {isDragActive ? 'Drop your resume here' : 'Drag and drop your resume here, or click to select'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">PDF files only (max 5MB)</p>
-                </div>
-              )}
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Target Role
+              </label>
+              <input
+                type="text"
+                name="role"
+                id="role"
+                value={formData.role}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="e.g., Software Engineer, Data Scientist"
+                required
+              />
             </div>
-            {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
-          </div>
 
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                'Preparing your interview...'
-              ) : (
-                <>
-                  Start Interview
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Target Company (Optional)
+              </label>
+              <input
+                type="text"
+                name="company"
+                id="company"
+                value={formData.company}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="e.g., Google, Microsoft"
+              />
+            </div>
 
-      <div className="grid md:grid-cols-3 gap-6 mb-12">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-            <Brain className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">AI-Powered Questions</h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Get personalized questions based on your resume and target role
-          </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Upload Resume (PDF)
+              </label>
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500'
+                  }`}
+              >
+                <input {...getInputProps()} />
+                {resumeFile ? (
+                  <div className="space-y-2">
+                    <FileText className="mx-auto h-12 w-12 text-green-500" />
+                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                      {resumeFile.name}
+                    </p>
+                    <p className="text-xs text-green-500 dark:text-green-400">
+                      Click or drag to replace
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Upload className="h-10 w-10 mx-auto text-gray-400 dark:text-gray-500" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {isDragActive ? 'Drop your resume here' : 'Drag and drop your resume here, or click to select'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">PDF files only (max 5MB)</p>
+                  </div>
+                )}
+              </div>
+              {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  'Preparing your interview...'
+                ) : (
+                  <>
+                    Start Interview
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-            <User className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <Brain className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">AI-Powered Questions</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Get personalized questions based on your resume and target role
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Practice Anywhere</h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Access your interviews anytime, from any device
-          </p>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <User className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Practice Anywhere</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Access your interviews anytime, from any device
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+              <BarChart3 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Learning Roadmap</h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Get a personalized plan to improve your skills and interview performance
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-            <BarChart3 className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Learning Roadmap</h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Get a personalized plan to improve your skills and interview performance
-          </p>
+        {/* Google AdSense - Horizontal Banner */}
+        <div className="mb-8">
+          <GoogleAd
+            slot="1234567890"
+            format="horizontal"
+            responsive={true}
+          />
         </div>
-      </div>
 
-      {/* Google AdSense - Horizontal Banner */}
-      <div className="mb-8">
-        <GoogleAd 
-          slot="1234567890"
-          format="horizontal"
-          responsive={true}
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => {
+            setShowAuthModal(false);
+            setFormDataToSubmit(null);
+          }}
+          initialMode="login"
         />
       </div>
-
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => {
-          setShowAuthModal(false);
-          setFormDataToSubmit(null);
-        }}
-        initialMode="login"
-      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -35,11 +36,18 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-6xl">
-      <h1 className="text-4xl font-bold text-center text-gray-900 dark:text-white mb-12">
-        Contact Us
-      </h1>
-      
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <SEO
+        title="Contact Us"
+        description="Get in touch with the AI Interviewer team. We're here to help with any questions or support you need."
+        url="/contact"
+      />
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+          Contact Us
+        </h1>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Contact Information */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 h-full">
@@ -49,7 +57,7 @@ const ContactUs = () => {
           <p className="text-gray-600 dark:text-gray-300 mb-8">
             Have questions or feedback? We'd love to hear from you. Reach out to us using the contact information below or send us a message using the form.
           </p>
-          
+
           <div className="space-y-6">
             <div className="flex items-start">
               <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full mr-4">
@@ -62,7 +70,7 @@ const ContactUs = () => {
                 </a>
               </div>
             </div>
-            
+
             <div className="flex items-start">
               <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full mr-4">
                 <Phone className="h-5 w-5 text-blue-600 dark:text-blue-300" />
@@ -73,7 +81,7 @@ const ContactUs = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Monday - Friday, 9am - 6pm IST</p>
               </div>
             </div>
-            
+
             <div className="flex items-start">
               <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full mr-4">
                 <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-300" />
@@ -87,7 +95,7 @@ const ContactUs = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Contact Form */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
           {submitted && (
@@ -95,7 +103,7 @@ const ContactUs = () => {
               <p>Thank you for contacting us! We'll get back to you soon.</p>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -112,7 +120,7 @@ const ContactUs = () => {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email Address <span className="text-red-500">*</span>
@@ -128,7 +136,7 @@ const ContactUs = () => {
                 />
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Subject <span className="text-red-500">*</span>
@@ -143,7 +151,7 @@ const ContactUs = () => {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
-            
+
             <div>
               <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Your Message <span className="text-red-500">*</span>
@@ -158,7 +166,7 @@ const ContactUs = () => {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
-            
+
             <div>
               <button
                 type="submit"

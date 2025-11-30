@@ -21,3 +21,4 @@ langchain-community
 langgraph
 razorpay
 email-validator
+bcrypt==4.0.1

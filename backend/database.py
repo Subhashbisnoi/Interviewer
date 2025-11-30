@@ -7,8 +7,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Get database URL from environment variables or use SQLite as fallback
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./interviewer.db")
+# Get database URL from environment variables
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
 # Create SQLAlchemy engine
 engine = create_engine(
@@ -16,8 +19,7 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
-    pool_recycle=3600,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    pool_recycle=3600
 )
 
 # Create session factory

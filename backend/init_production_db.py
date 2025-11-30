@@ -18,11 +18,12 @@ def init_database():
     print("🔄 Initializing database...")
     
     # Check database URL
-    db_url = os.getenv("DATABASE_URL", "sqlite:///./interviewer.db")
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        print("❌ Error: DATABASE_URL environment variable is not set")
+        sys.exit(1)
+        
     print(f"📊 Using database: {db_url.split('@')[0]}...")  # Don't print password
-    
-    if "sqlite" in db_url.lower():
-        print("⚠️  WARNING: Using SQLite. For production, configure DATABASE_URL environment variable.")
     
     try:
         # Drop all existing tables (only in production setup, not in runtime)
@@ -36,13 +37,8 @@ def init_database():
         # Verify tables were created
         db = SessionLocal()
         try:
-            # Test query - use PostgreSQL or SQLite syntax
-            if "sqlite" not in db_url.lower():
-                # PostgreSQL
-                result = db.execute("SELECT 1")
-            else:
-                # SQLite
-                result = db.execute("SELECT 1")
+            # Test query - PostgreSQL
+            result = db.execute("SELECT 1")
             print("✅ Database initialized successfully!")
             print(f"📊 Tables created: {', '.join(Base.metadata.tables.keys())}")
         except Exception as e:

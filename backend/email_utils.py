@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 import logging
 import traceback
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Email configuration
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+if EMAIL_PASSWORD:
+    EMAIL_PASSWORD = EMAIL_PASSWORD.replace(" ", "")
 EMAIL_FROM = os.getenv("EMAIL_FROM", EMAIL_USER)
 
 logger = logging.getLogger("uvicorn.error")

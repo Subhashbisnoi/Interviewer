@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -37,15 +38,15 @@ const OAuthHandler = () => {
       const urlParams = new URLSearchParams(location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
-      
+
       if (code && state === 'github-auth') {
         try {
           console.log('Handling GitHub OAuth callback with code:', code);
           const result = await githubLogin(code);
-          
+
           // Clean up URL parameters
           window.history.replaceState({}, document.title, window.location.pathname);
-          
+
           if (result.success) {
             console.log('GitHub login successful, navigating to home');
             navigate('/', { replace: true });
@@ -83,7 +84,7 @@ const AppContent = () => {
   const setSession = (session) => {
     setCurrentSession(session);
   };
-  
+
   // Check if current route is interview to skip container padding and sidebar
   const isInterviewPage = location.pathname === '/interview';
 
@@ -97,9 +98,9 @@ const AppContent = () => {
         <main className={isInterviewPage ? 'flex-1' : 'flex-1 container mx-auto px-4 py-8'}>
           <Routes>
             {/* Main Pages */}
-            <Route 
-              path="/" 
-              element={<Home onStartInterview={startNewInterview} />} 
+            <Route
+              path="/"
+              element={<Home onStartInterview={startNewInterview} />}
             />
             <Route
               path="/about"
@@ -174,8 +175,8 @@ const AppContent = () => {
               element={
                 <ProtectedRoute>
                   {interviewData ? (
-                    <Interview 
-                      interviewData={interviewData} 
+                    <Interview
+                      interviewData={interviewData}
                       onSessionCreated={setSession}
                     />
                   ) : (
@@ -205,6 +206,8 @@ const AppContent = () => {
   );
 };
 
+
+
 function App() {
   return (
     <Router>
@@ -212,6 +215,7 @@ function App() {
         <ToastProvider>
           <AuthProvider>
             <AppContent />
+            <Analytics />
           </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

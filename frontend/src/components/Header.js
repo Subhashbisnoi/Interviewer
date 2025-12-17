@@ -41,7 +41,7 @@ const Header = () => {
                 alt="InterviewForge Logo"
                 className="h-10 w-10 object-contain"
               />
-              <h1 className="text-sm sm:text-xl font-bold text-gray-900 dark:text-white">InterviewForge</h1>
+              <h1 className="hidden sm:block text-xl font-bold text-gray-900 dark:text-white">InterviewForge</h1>
             </Link>
 
             <nav className="hidden lg:flex space-x-8">

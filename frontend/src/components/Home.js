@@ -99,7 +99,7 @@ const Home = ({ onStartInterview }) => {
 
       // Upload resume and extract text
       const uploadResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'} /interview/upload - resume`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/upload-resume`,
         {
           method: 'POST',
           headers,
@@ -128,7 +128,7 @@ const Home = ({ onStartInterview }) => {
 
       // Start interview with extracted resume text
       const interviewResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'} /interview/start`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/start`,
         {
           method: 'POST',
           headers: {

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageSquare, Trophy, Settings, HelpCircle, FileText, Users, Sun, Moon, History, Pin, DollarSign, Crown, Zap, Menu, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import logo from '../images/ChatGPT_Image_Dec_12__2025_at_11_57_18_AM-removebg-preview.png';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -173,7 +174,7 @@ const Sidebar = () => {
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
           <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center space-x-3">
             <img
-              src="/images/ChatGPT_Image_Dec_12__2025_at_11_57_18_AM-removebg-preview.png"
+              src={logo}
               alt="InterviewForge Logo"
               className="h-10 w-10 object-contain"
             />

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
+import logo from '../images/ChatGPT_Image_Dec_12__2025_at_11_57_18_AM-removebg-preview.png';
 
 const Header = () => {
   const location = useLocation();
@@ -36,7 +37,7 @@ const Header = () => {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center space-x-3">
               <img
-                src="/images/ChatGPT_Image_Dec_12__2025_at_11_57_18_AM-removebg-preview.png"
+                src={logo}
                 alt="InterviewForge Logo"
                 className="h-10 w-10 object-contain"
               />

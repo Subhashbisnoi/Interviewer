@@ -8,21 +8,19 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
 
   const [cameraAllowed, setCameraAllowed] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [micMuted, setMicMuted] = useState(false);
   const [videoEnabled, setVideoEnabled] = useState(true);
-  const [showControls, setShowControls] = useState(true);
   const [connectionQuality, setConnectionQuality] = useState('good');
 
   useEffect(() => {
     let mounted = true;
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 }
-          }, 
-          audio: false 
+          },
+          audio: false
         });
         if (!mounted) return;
         setCameraAllowed(true);
@@ -53,24 +51,24 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
   // Animate the AI interviewer when speaking
   useEffect(() => {
     if (!canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let phase = 0; // Local phase variable
-    
+
     const drawInterviewer = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       // Background gradient
       const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
       bgGradient.addColorStop(0, '#1e3a8a');
       bgGradient.addColorStop(1, '#0f172a');
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
-      
+
       // Draw avatar circle with glow effect
       const glowGradient = ctx.createRadialGradient(centerX, centerY, 60, centerX, centerY, 100);
       glowGradient.addColorStop(0, isSpeaking ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)');
@@ -79,7 +77,7 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
       ctx.beginPath();
       ctx.arc(centerX, centerY, 100, 0, Math.PI * 2);
       ctx.fill();
-      
+
       // Main avatar circle
       const avatarGradient = ctx.createRadialGradient(centerX, centerY - 20, 0, centerX, centerY, 80);
       avatarGradient.addColorStop(0, '#3b82f6');
@@ -88,20 +86,20 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
       ctx.beginPath();
       ctx.arc(centerX, centerY, 80, 0, Math.PI * 2);
       ctx.fill();
-      
+
       // AI icon - head
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(centerX, centerY - 10, 25, 0, Math.PI * 2);
       ctx.fill();
-      
+
       // Eyes
       ctx.fillStyle = '#1e40af';
       ctx.beginPath();
       ctx.arc(centerX - 10, centerY - 15, 4, 0, Math.PI * 2);
       ctx.arc(centerX + 10, centerY - 15, 4, 0, Math.PI * 2);
       ctx.fill();
-      
+
       // Mouth - animated when speaking
       ctx.strokeStyle = '#1e40af';
       ctx.lineWidth = 2;
@@ -113,45 +111,45 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
         ctx.arc(centerX, centerY - 5, 8, 0, Math.PI);
       }
       ctx.stroke();
-      
+
       // Body
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(centerX - 20, centerY + 20, 40, 30);
-      
+
       // Sound waves when speaking
       if (isSpeaking) {
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
         ctx.lineWidth = 2;
-        
+
         for (let i = 1; i <= 3; i++) {
           const radius = 100 + (i * 20);
           const opacity = (Math.sin(phase + i) + 1) / 2;
           ctx.globalAlpha = opacity * 0.6;
-          
+
           ctx.beginPath();
           ctx.arc(centerX, centerY, radius, Math.PI * 0.2, Math.PI * 0.8);
           ctx.stroke();
-          
+
           ctx.beginPath();
           ctx.arc(centerX, centerY, radius, Math.PI * 1.2, Math.PI * 1.8);
           ctx.stroke();
         }
         ctx.globalAlpha = 1;
       }
-      
+
       // Text label
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('AI Interviewer', centerX, canvas.height - 30);
-      
+
       if (isSpeaking) {
         ctx.font = '14px Arial';
         ctx.fillStyle = '#3b82f6';
         ctx.fillText('Speaking...', centerX, canvas.height - 10);
       }
     };
-    
+
     const animate = () => {
       drawInterviewer();
       if (isSpeaking) {
@@ -159,9 +157,9 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
       }
       animationFrameRef.current = requestAnimationFrame(animate);
     };
-    
+
     animate();
-    
+
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -171,27 +169,27 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
 
   async function playQuestion(text) {
     if (!text) return;
-    
+
     // Cancel any ongoing speech
     speechSynthesis.cancel();
-    
+
     // Use browser's built-in speech synthesis
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
-    
+
     utterance.onstart = () => {
       setIsSpeaking(true);
     };
-    
+
     utterance.onend = () => {
       setIsSpeaking(false);
     };
-    
+
     utterance.onerror = () => {
       setIsSpeaking(false);
     };
-    
+
     speechSynthesis.speak(utterance);
   }
 
@@ -216,7 +214,7 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
       <div className="video-grid">
         {/* AI Interviewer */}
         <div className={`participant-box interviewer ${connectionQuality}`}>
-          <canvas 
+          <canvas
             ref={canvasRef}
             width={400}
             height={300}
@@ -253,11 +251,11 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
               </div>
             </div>
           )}
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted 
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
             className={`participant-video ${!videoEnabled ? 'hidden' : ''}`}
           />
           {!videoEnabled && (
@@ -270,44 +268,6 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
           </div>
         </div>
       </div>
-
-      {/* Meet-like controls bar */}
-      {showControls && (
-        <div className="controls-bar">
-          <button 
-            className={`control-button ${micMuted ? 'active' : ''}`}
-            onClick={() => setMicMuted(!micMuted)}
-          >
-            {micMuted ? '🎤⛔' : '🎤'}
-          </button>
-          <button 
-            className={`control-button ${!videoEnabled ? 'active' : ''}`}
-            onClick={() => setVideoEnabled(!videoEnabled)}
-          >
-            {videoEnabled ? '📹' : '📹⛔'}
-          </button>
-          <button
-            className="control-button primary"
-            onClick={() => !isSpeaking && playQuestion(questionText)}
-            disabled={isSpeaking}
-          >
-            {isSpeaking ? 'Speaking...' : 'Repeat Question'}
-          </button>
-          <button
-            className="control-button"
-            onClick={() => onRequestNextQuestion && onRequestNextQuestion()}
-            disabled={isSpeaking}
-          >
-            Next ➡️
-          </button>
-          <button 
-            className="control-button danger"
-            onClick={() => window.confirm('End interview?') && window.location.reload()}
-          >
-            End Call
-          </button>
-        </div>
-      )}
     </div>
   );
 });

@@ -15,13 +15,17 @@ html,
 body,
 #root {
   min-height: 100vh;
-  background-color: #f9fafb; /* gray-50 */
+  background-color: #f9fafb;
+  /* gray-50 */
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 html.dark,
 html.dark body,
 html.dark #root {
-  background-color: #111827; /* gray-900 */
+  background-color: #111827;
+  /* gray-900 */
 }
 
 code {
@@ -35,6 +39,7 @@ code {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -51,6 +56,7 @@ code {
     transform: translate(-50%, -100%);
     opacity: 0;
   }
+
   to {
     transform: translate(-50%, 0);
     opacity: 1;
@@ -63,9 +69,12 @@ code {
 
 /* Loading Skeleton Animation */
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }

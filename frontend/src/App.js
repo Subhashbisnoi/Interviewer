@@ -89,13 +89,13 @@ const AppContent = () => {
   const isInterviewPage = location.pathname === '/interview';
 
   return (
-    <div className={`min-h-screen ${isInterviewPage ? 'bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'} flex`}>
+    <div className={`min-h-screen overflow-x-hidden ${isInterviewPage ? 'bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'} flex`}>
       <OAuthHandler />
       <SessionWarningModal />
       {!isInterviewPage && <Sidebar />}
-      <div className={`flex-1 flex flex-col ${!isInterviewPage ? 'ml-64' : ''}`}>
+      <div className={`flex-1 flex flex-col ${!isInterviewPage ? 'lg:ml-64' : ''}`}>
         {!isInterviewPage && <Header />}
-        <main className={isInterviewPage ? 'flex-1' : 'flex-1 container mx-auto px-4 py-8'}>
+        <main className={isInterviewPage ? 'flex-1' : 'flex-1 w-full px-4 py-8 lg:container lg:mx-auto'}>
           <Routes>
             {/* Main Pages */}
             <Route

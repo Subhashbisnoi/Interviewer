@@ -1,0 +1,117 @@
+/* Mobile-First Responsive Fixes */
+
+/* Prevent horizontal overflow */
+html {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+}
+
+#root {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+/* Force all elements to stay within viewport */
+* {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Mobile-specific container fixes */
+@media (max-width: 1023px) {
+
+    /* Main containers */
+    .container,
+    .mx-auto {
+        max-width: 100% !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* Remove negative margins that cause overflow */
+    * {
+        margin-left: 0 !important;
+    }
+
+    /* Ensure text doesn't overflow */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    div {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+
+    /* Fix button widths */
+    button {
+        max-width: 100%;
+    }
+
+    /* Fix form inputs */
+    input,
+    textarea,
+    select {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Fix cards and panels */
+    .rounded-lg,
+    .shadow-lg,
+    .bg-white {
+        max-width: 100% !important;
+    }
+
+    /* Fix grid layouts */
+    .grid {
+        width: 100%;
+    }
+
+    /* Fix flexbox that might cause overflow */
+    .flex {
+        flex-wrap: wrap;
+    }
+}
+
+/* Extra small mobile devices (< 375px) */
+@media (max-width: 374px) {
+    body {
+        font-size: 14px;
+    }
+
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .text-4xl {
+        font-size: 1.5rem !important;
+    }
+
+    .text-3xl {
+        font-size: 1.25rem !important;
+    }
+
+    .text-2xl {
+        font-size: 1.125rem !important;
+    }
+
+    .text-xl {
+        font-size: 1rem !important;
+    }
+}

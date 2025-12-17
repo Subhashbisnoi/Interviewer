@@ -63,7 +63,7 @@ const Interview = ({ interviewData, onSessionCreated }) => {
       }
 
       const result = await response.json();
-      
+
       onSessionCreated({
         ...interviewData,
         thread_id: interviewData.session_id,
@@ -118,8 +118,8 @@ const Interview = ({ interviewData, onSessionCreated }) => {
           </div>
         </div>
 
-        <div className="flex-1 p-4 overflow-auto" ref={videoMeetingRef}>
-          <RoboInterviewer 
+        <div className="p-2 sm:p-4 sm:flex-1 overflow-auto" ref={videoMeetingRef}>
+          <RoboInterviewer
             ref={roboInterviewerRef}
             questionText={questions[currentQuestion]}
             onRequestNextQuestion={() => {
@@ -132,7 +132,7 @@ const Interview = ({ interviewData, onSessionCreated }) => {
           />
         </div>
 
-        <div className="bg-gray-800 px-6 py-4 border-t border-gray-700 flex-shrink-0 overflow-y-auto max-h-96">
+        <div className="bg-gray-800 px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-700 flex-1 overflow-y-auto">
           {error && (
             <div className="mb-4 p-3 bg-red-900 border border-red-700 text-red-200 rounded-lg text-sm">
               {error}
@@ -179,7 +179,7 @@ const Interview = ({ interviewData, onSessionCreated }) => {
                   onError={handleRecordingError}
                   buttonText={answers[currentQuestion] ? 'Re-record Answer' : 'Record Answer'}
                 />
-                
+
                 {transcribedAnswer && (
                   <div className="mt-3 p-3 bg-gray-600 rounded-lg">
                     <p className="text-xs text-gray-300 mb-1">Transcribed:</p>
@@ -204,112 +204,184 @@ const Interview = ({ interviewData, onSessionCreated }) => {
                 />
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="flex justify-between items-center">
+        {/* Mobile Navigation - Fixed at Bottom */}
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-2 space-y-2 z-50">
+          {/* Row 1: Previous / Next */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (currentQuestion > 0) {
+                  setCurrentQuestion(currentQuestion - 1);
+                  setTranscribedAnswer('');
+                }
+              }}
+              disabled={currentQuestion === 0}
+              className="flex-1 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-1 text-sm"
+            >
+              <ArrowRight className="h-4 w-4 rotate-180" />
+              Prev
+            </button>
+            <button
+              onClick={() => {
+                if (currentQuestion < questions.length - 1) {
+                  setCurrentQuestion(currentQuestion + 1);
+                  setTranscribedAnswer('');
+                }
+              }}
+              disabled={currentQuestion >= questions.length - 1}
+              className="flex-1 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-1 text-sm"
+            >
+              Next
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Row 2: Ask Question / End Call / Submit */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (roboInterviewerRef.current) {
+                  roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
+                }
+              }}
+              className="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm"
+            >
+              🔊 Ask
+            </button>
+            {currentQuestion < questions.length - 1 ? (
               <button
                 onClick={() => {
-                  if (currentQuestion > 0) {
-                    setCurrentQuestion(currentQuestion - 1);
+                  if (currentQuestion < questions.length - 1) {
+                    setCurrentQuestion(currentQuestion + 1);
                     setTranscribedAnswer('');
                   }
                 }}
-                disabled={currentQuestion === 0}
-                className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                disabled={!answers[currentQuestion]?.trim()}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 text-sm"
               >
-                <ArrowRight className="h-4 w-4 rotate-180" />
-                <span>Previous</span>
+                Submit →
               </button>
-
-              <div className="flex-1 mx-4 flex items-center justify-center space-x-3">
-                {/* Meeting Controls */}
-                <button
-                  onClick={() => {
-                    if (roboInterviewerRef.current) {
-                      roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
-                    }
-                  }}
-                  className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
-                  title="Replay question"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  </svg>
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (roboInterviewerRef.current) {
-                      roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
-                    }
-                  }}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                >
-                  Ask Question
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (currentQuestion < questions.length - 1) {
-                      setCurrentQuestion(currentQuestion + 1);
-                      setTranscribedAnswer('');
-                    }
-                  }}
-                  disabled={currentQuestion >= questions.length - 1}
-                  className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                >
-                  <span>Next</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to end this interview?')) {
-                      navigate('/');
-                    }
-                  }}
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                >
-                  End Call
-                </button>
-              </div>
-
-              {currentQuestion < questions.length - 1 ? (
-                <button
-                  onClick={() => {
-                    if (currentQuestion < questions.length - 1) {
-                      setCurrentQuestion(currentQuestion + 1);
-                      setTranscribedAnswer('');
-                    }
-                  }}
-                  disabled={!answers[currentQuestion]?.trim()}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                >
-                  <span>Submit & Next</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              ) : (
-                <button
-                  onClick={submitInterview}
-                  disabled={isSubmitting || answers.some(answer => !answer?.trim())}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Submitting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Submit Interview</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
+            ) : (
+              <button
+                onClick={submitInterview}
+                disabled={isSubmitting || answers.some(answer => !answer?.trim())}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50 text-sm"
+              >
+                {isSubmitting ? '...' : 'Submit ✓'}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (window.confirm('End interview?')) {
+                  navigate('/');
+                }
+              }}
+              className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm"
+            >
+              End
+            </button>
           </div>
+        </div>
+
+        {/* Desktop Navigation - Horizontal */}
+        <div className="hidden sm:flex justify-between items-center">
+          <button
+            onClick={() => {
+              if (currentQuestion > 0) {
+                setCurrentQuestion(currentQuestion - 1);
+                setTranscribedAnswer('');
+              }
+            }}
+            disabled={currentQuestion === 0}
+            className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 flex items-center space-x-2"
+          >
+            <ArrowRight className="h-4 w-4 rotate-180" />
+            <span>Previous</span>
+          </button>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => {
+                if (roboInterviewerRef.current) {
+                  roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
+                }
+              }}
+              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
+              title="Replay question"
+            >
+              🔊
+            </button>
+            <button
+              onClick={() => {
+                if (roboInterviewerRef.current) {
+                  roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
+                }
+              }}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
+            >
+              Ask Question
+            </button>
+            <button
+              onClick={() => {
+                if (currentQuestion < questions.length - 1) {
+                  setCurrentQuestion(currentQuestion + 1);
+                  setTranscribedAnswer('');
+                }
+              }}
+              disabled={currentQuestion >= questions.length - 1}
+              className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 flex items-center space-x-2"
+            >
+              <span>Next</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to end this interview?')) {
+                  navigate('/');
+                }
+              }}
+              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+            >
+              End Call
+            </button>
+          </div>
+
+          {currentQuestion < questions.length - 1 ? (
+            <button
+              onClick={() => {
+                if (currentQuestion < questions.length - 1) {
+                  setCurrentQuestion(currentQuestion + 1);
+                  setTranscribedAnswer('');
+                }
+              }}
+              disabled={!answers[currentQuestion]?.trim()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
+            >
+              <span>Submit & Next</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={submitInterview}
+              disabled={isSubmitting || answers.some(answer => !answer?.trim())}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Submit Interview</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

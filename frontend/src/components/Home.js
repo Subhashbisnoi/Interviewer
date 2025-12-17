@@ -99,7 +99,7 @@ const Home = ({ onStartInterview }) => {
 
       // Upload resume and extract text
       const uploadResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/upload-resume`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'} /interview/upload - resume`,
         {
           method: 'POST',
           headers,
@@ -128,7 +128,7 @@ const Home = ({ onStartInterview }) => {
 
       // Start interview with extracted resume text
       const interviewResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/start`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'} /interview/start`,
         {
           method: 'POST',
           headers: {
@@ -146,27 +146,6 @@ const Home = ({ onStartInterview }) => {
       if (interviewResponse.status === 401) {
         toast.error('Session expired. Please login again.');
         setShowAuthModal(true);
-        return;
-      }
-
-      // Handle subscription limit (403)
-      if (interviewResponse.status === 403) {
-        const errorData = await interviewResponse.json().catch(() => ({}));
-        const errorDetail = errorData.detail;
-
-        // Check if it's a subscription limit error
-        if (typeof errorDetail === 'object' && errorDetail.upgrade_required) {
-          const message = errorDetail.message || 'You have reached your interview limit.';
-          setError(message);
-          toast.error(message, { duration: 6000 });
-
-          // Show upgrade prompt
-          if (confirm(`${message}\n\nWould you like to upgrade to Premium now?`)) {
-            navigate('/pricing');
-          }
-        } else {
-          throw new Error(typeof errorDetail === 'string' ? errorDetail : 'Access denied');
-        }
         return;
       }
 
@@ -242,14 +221,14 @@ const Home = ({ onStartInterview }) => {
         })}
       </script>
 
-      <div className="w-full max-w-4xl mx-auto py-6 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="text-center mb-6 sm:mb-12">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">AI Interview Practice & Preparation</h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400">Master your next technical interview with our advanced AI Interviewer. Get instant feedback, coding challenges, and system design practice.</p>
+      <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Free AI Interview Practice & Preparation</h1>
+          <p className="text-xl text-gray-600 dark:text-gray-400">Master your next technical interview with our advanced AI Interviewer. Get instant feedback, coding challenges, and system design practice.</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Target Role
@@ -268,7 +247,7 @@ const Home = ({ onStartInterview }) => {
 
             <div>
               <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Target Company
+                Target Company (Optional)
               </label>
               <input
                 type="text"
@@ -335,7 +314,7 @@ const Home = ({ onStartInterview }) => {
           </form>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 w-full">
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
             <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-4">
               <Brain className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />

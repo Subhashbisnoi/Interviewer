@@ -223,7 +223,7 @@ const Home = ({ onStartInterview }) => {
 
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Free AI Interview Practice & Preparation</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">AI Interview Practice & Preparation</h1>
           <p className="text-xl text-gray-600 dark:text-gray-400">Master your next technical interview with our advanced AI Interviewer. Get instant feedback, coding challenges, and system design practice.</p>
         </div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Search, Mail, MessageCircle } from 'lucide-react';
-import GoogleAd from '../components/GoogleAd';
+
 
 const Help = () => {
   const [openFaq, setOpenFaq] = useState(null);
@@ -144,15 +144,8 @@ const Help = () => {
             </button>
           </div>
         </div>
-        
-        {/* Google AdSense - Bottom Banner */}
-        <div className="mt-8">
-          <GoogleAd 
-            slot="6789012345"
-            format="horizontal"
-            responsive={true}
-          />
-        </div>
+
+
       </div>
     </div>
   );

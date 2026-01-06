@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, END
 import json
 
 from database import get_db, SessionLocal
-from models import User, InterviewSession, ChatMessage, InterviewState
+from models import User, InterviewSession, ChatMessage, InterviewState, InterviewMode
 from generator import generate_question
 from feedback import feedback_generator
 from roadmap import generate_roadmap
@@ -309,8 +309,23 @@ class InterviewStateManager:
         
         return workflow.compile()
     
-    def create_interview_session(self, user_id: int, role: str, company: str, resume_text: str) -> Dict[str, Any]:
-        """Create a new interview session with a unique thread ID."""
+    def create_interview_session(
+        self, 
+        user_id: int, 
+        role: str, 
+        company: str, 
+        resume_text: str,
+        interview_mode: str = "short"
+    ) -> Dict[str, Any]:
+        """Create a new interview session with a unique thread ID.
+        
+        Args:
+            user_id: The user's ID
+            role: Job role for the interview
+            company: Company name
+            resume_text: Extracted resume text
+            interview_mode: 'short' for 3-question interview, 'detailed' for multi-round
+        """
         
         # Generate unique thread ID
         thread_id = f"interview_{uuid.uuid4().hex}"
@@ -325,13 +340,19 @@ class InterviewStateManager:
                 role=role,
                 company=company,
                 resume_text=resume_text,
-                status="active"
+                status="active",
+                interview_mode=interview_mode,
+                current_round=1,
+                rounds_attempted=0,
+                round_results=None,
+                termination_reason=None,
+                current_difficulty="medium"
             )
             db.add(db_session)
             db.commit()
             db.refresh(db_session)
             
-            # Initialize state
+            # Initialize state with new fields for interview mode
             initial_state: InterviewState = {
                 "thread_id": thread_id,
                 "user_id": user_id,
@@ -350,10 +371,16 @@ class InterviewStateManager:
                 "status": "started",
                 "started_at": datetime.now(timezone.utc).isoformat(),
                 "completed_at": None,
-                "chat_history": []
+                "chat_history": [],
+                # New fields for interview mode
+                "interview_mode": interview_mode,
+                "current_round": 1,
+                "current_difficulty": "medium",
+                "round_results": [],
+                "termination_reason": None
             }
             
-            # Run the initial step
+            # Run the initial step (generates questions)
             config = {"configurable": {"thread_id": thread_id}}
             result = self.graph.invoke(initial_state, config)
             
@@ -361,24 +388,28 @@ class InterviewStateManager:
             self.states[thread_id] = result
             
             # Save initial questions to database
-            if result.get("questions"):
-                for i, question in enumerate(result["questions"][:3]):  # Save up to 3 questions
-                    question_message = ChatMessage(
-                        session_id=db_session.id,
-                        thread_id=thread_id,
-                        message_type="question",
-                        role="assistant",
-                        content=question,
-                        question_number=i + 1
-                    )
-                    db.add(question_message)
-                db.commit()
+            questions_to_save = result.get("questions", [])
+            max_questions = 3 if interview_mode == "short" else len(questions_to_save)
+            
+            for i, question in enumerate(questions_to_save[:max_questions]):
+                question_message = ChatMessage(
+                    session_id=db_session.id,
+                    thread_id=thread_id,
+                    message_type="question",
+                    role="assistant",
+                    content=question,
+                    question_number=i + 1
+                )
+                db.add(question_message)
+            db.commit()
             
             return {
                 "thread_id": thread_id,
                 "session_id": db_session.id,
                 "questions": result.get("questions", []),
-                "status": result.get("status", "started")
+                "status": result.get("status", "started"),
+                "interview_mode": interview_mode,
+                "current_round": 1
             }
             
         finally:

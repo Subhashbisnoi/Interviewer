@@ -72,8 +72,8 @@ ${session.roadmap}
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <PinButton 
-              sessionId={session.thread_id} 
+            <PinButton
+              sessionId={session.thread_id}
               isPinned={session.is_pinned || false}
               onPinChange={(sessionId, isPinned) => {
                 // Update the session object if needed
@@ -100,7 +100,7 @@ ${session.roadmap}
         </div>
 
         {/* Score Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6 text-center">
             <div className="text-3xl font-bold mb-2">{session.total_score}/30</div>
             <div className="text-blue-100">Total Score</div>
@@ -112,6 +112,19 @@ ${session.roadmap}
           <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-6 text-center">
             <div className="text-3xl font-bold mb-2">{session.questions.length}</div>
             <div className="text-purple-100">Questions</div>
+          </div>
+          <div className={`bg-gradient-to-r text-white rounded-lg p-6 text-center ${session.fit_percentage >= 70
+              ? 'from-emerald-500 to-emerald-600'
+              : session.fit_percentage >= 50
+                ? 'from-amber-500 to-amber-600'
+                : 'from-rose-500 to-rose-600'
+            }`}>
+            <div className="text-3xl font-bold mb-2">{session.fit_percentage || Math.round(session.average_score * 10)}%</div>
+            <div className={`${session.fit_percentage >= 70 ? 'text-emerald-100' :
+                session.fit_percentage >= 50 ? 'text-amber-100' : 'text-rose-100'
+              }`}>
+              Role Fit
+            </div>
           </div>
         </div>
 
@@ -127,11 +140,10 @@ ${session.roadmap}
           <nav className="flex space-x-8 px-8">
             <button
               onClick={() => setActiveTab('feedback')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'feedback'
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'feedback'
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <Star className="h-4 w-4" />
@@ -140,11 +152,10 @@ ${session.roadmap}
             </button>
             <button
               onClick={() => setActiveTab('roadmap')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'roadmap'
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'roadmap'
                   ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-4 w-4" />
@@ -158,7 +169,7 @@ ${session.roadmap}
           {activeTab === 'feedback' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Question-by-Question Feedback</h2>
-              
+
               {session.questions.map((question, index) => (
                 <div key={index} className={`border dark:border-gray-700 rounded-lg p-6 ${getFeedbackBorderClass(session.feedback[index]?.marks)} bg-white dark:bg-gray-800`}>
                   <div className="flex items-start justify-between mb-4">
@@ -177,19 +188,19 @@ ${session.roadmap}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
                     <h3 className="font-medium text-gray-900 dark:text-gray-200 mb-2">Question:</h3>
                     <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{question}</p>
                   </div>
-                  
+
                   <div className="mb-4">
                     <h3 className="font-medium text-gray-900 dark:text-gray-200 mb-2">Your Answer:</h3>
                     <p className="text-gray-800 dark:text-gray-200 leading-relaxed bg-gray-50 dark:bg-gray-700 p-3 rounded">
                       {session.answers[index]}
                     </p>
                   </div>
-                  
+
                   <div>
                     <h3 className="font-medium text-gray-900 dark:text-gray-200 mb-2">Feedback:</h3>
                     <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
@@ -224,7 +235,7 @@ ${session.roadmap}
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">What You Did Well</h3>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
-            Based on your scores, you showed strong understanding in areas where you scored 8+ points. 
+            Based on your scores, you showed strong understanding in areas where you scored 8+ points.
             Keep building on these strengths!
           </p>
         </div>
@@ -237,7 +248,7 @@ ${session.roadmap}
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Areas for Improvement</h3>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
-            Focus on the learning roadmap above to improve areas where you scored lower. 
+            Focus on the learning roadmap above to improve areas where you scored lower.
             Practice makes perfect!
           </p>
         </div>

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { DashboardSkeleton } from '../components/LoadingSkeleton';
-import GoogleAd from '../components/GoogleAd';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Award, 
-  Target, 
+
+import {
+  TrendingUp,
+  TrendingDown,
+  Award,
+  Target,
   Calendar,
   Clock,
   CheckCircle,
@@ -38,7 +38,7 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      
+
       // Fetch analytics and sessions in parallel
       const [analyticsResponse, sessionsResponse] = await Promise.all([
         fetch(`${apiUrl}/interview/analytics`, {
@@ -93,13 +93,13 @@ const Dashboard = () => {
   const calculateImprovement = () => {
     const completedSessions = sessions.filter(s => s.score && s.score > 0);
     if (completedSessions.length < 6) return 0;
-    
+
     const firstThree = completedSessions.slice(0, 3).map(s => s.score || 0);
     const lastThree = completedSessions.slice(-3).map(s => s.score || 0);
-    
+
     const firstAvg = firstThree.reduce((a, b) => a + b, 0) / 3;
     const lastAvg = lastThree.reduce((a, b) => a + b, 0) / 3;
-    
+
     return ((lastAvg - firstAvg) / firstAvg) * 100;
   };
 
@@ -314,15 +314,8 @@ const Dashboard = () => {
             </div>
           </div>
         )}
-        
-        {/* Google AdSense - Bottom Banner */}
-        <div className="mt-8">
-          <GoogleAd 
-            slot="2345678901"
-            format="horizontal"
-            responsive={true}
-          />
-        </div>
+
+
       </div>
     </div>
   );

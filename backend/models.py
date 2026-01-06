@@ -1,9 +1,32 @@
 from typing import List, Optional, Dict, Any, TypedDict
 from datetime import datetime
+from enum import Enum
 from pydantic import BaseModel, Field, HttpUrl
 from sqlalchemy import Boolean, Column, Integer, String, Text, DateTime, ForeignKey, JSON, Float
 from sqlalchemy.orm import relationship
 from database import Base
+
+
+# Interview Mode Enums
+class InterviewMode(str, Enum):
+    """Interview mode types."""
+    SHORT = "short"
+    DETAILED = "detailed"
+
+
+class RoundType(str, Enum):
+    """Types of interview rounds for detailed interviews."""
+    SCREENING = "screening"
+    CORE_SKILLS = "core_skills"
+    ADVANCED = "advanced"
+    BAR_RAISER = "bar_raiser"
+
+
+class DifficultyLevel(str, Enum):
+    """Difficulty levels for adaptive questioning."""
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
 
 # SQLAlchemy Models
 class User(Base):
@@ -54,7 +77,7 @@ class InterviewSession(Base):
     role = Column(String)
     company = Column(String)
     resume_text = Column(Text)  # Store resume text directly
-    status = Column(String, default="active")  # active, completed, archived
+    status = Column(String, default="active")  # active, completed, archived, terminated
     total_score = Column(Float, default=0.0)
     average_score = Column(Float, default=0.0)
     is_pinned = Column(Boolean, default=False)  # For pinned results
@@ -62,6 +85,14 @@ class InterviewSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+    
+    # NEW: Interview mode and round tracking
+    interview_mode = Column(String, default="short")  # short, detailed
+    current_round = Column(Integer, default=1)  # Current round number (1-4)
+    rounds_attempted = Column(Integer, default=0)  # Total rounds attempted
+    round_results = Column(JSON, nullable=True)  # Stores per-round results
+    termination_reason = Column(String, nullable=True)  # Why interview ended early
+    current_difficulty = Column(String, default="medium")  # easy, medium, hard
     
     # Relationships
     user = relationship("User", back_populates="interviews")
@@ -120,6 +151,32 @@ class StructuredEvaluator(BaseModel):
         ..., description="List containing feedback and marks for each answer."
     )
 
+
+# NEW: Multi-dimensional scoring models for detailed interviews
+class QuestionScore(BaseModel):
+    """Multi-dimensional score for a single question in detailed interviews."""
+    correctness: int = Field(..., ge=0, le=10, description="Technical accuracy score")
+    clarity: int = Field(..., ge=0, le=10, description="Communication clarity score")
+    structure: int = Field(..., ge=0, le=10, description="Answer structure score")
+    depth: int = Field(..., ge=0, le=10, description="Technical depth score")
+    feedback: str = Field(default="", description="Detailed feedback text")
+    
+    @property
+    def average(self) -> float:
+        return (self.correctness + self.clarity + self.structure + self.depth) / 4
+
+
+class RoundResult(BaseModel):
+    """Results for a single interview round."""
+    round_number: int = Field(..., ge=1, le=4, description="Round number (1-4)")
+    round_type: str = Field(..., description="Type of round: screening, core_skills, advanced, bar_raiser")
+    questions: List[str] = Field(default_factory=list, description="Questions asked in this round")
+    answers: List[str] = Field(default_factory=list, description="Candidate answers")
+    scores: List[QuestionScore] = Field(default_factory=list, description="Scores for each question")
+    average_score: float = Field(default=0.0, description="Average score for this round")
+    passed: bool = Field(default=False, description="Whether candidate passed this round")
+    difficulty_used: str = Field(default="medium", description="Difficulty level used in this round")
+
 # Enhanced state management for LangGraph
 class InterviewState(TypedDict):
     """Enhanced state of the interview process with threading support."""
@@ -136,12 +193,12 @@ class InterviewState(TypedDict):
     # Company research data
     company_research: Optional[Dict[str, Any]]
     
-    # Interview progress
+    # Interview progress (for short interviews)
     questions: List[str]
     answers: List[str]
     current_question: int
     
-    # Evaluation data
+    # Evaluation data (for short interviews)
     feedback: List[dict]
     marks: List[int]
     total_score: float
@@ -151,21 +208,31 @@ class InterviewState(TypedDict):
     roadmap: str
     
     # Status and metadata
-    status: str  # started, in_progress, completed
+    status: str  # started, in_progress, completed, terminated
     started_at: str
     completed_at: Optional[str]
     chat_history: List[dict]
+    
+    # NEW: Interview mode and round tracking (for detailed interviews)
+    interview_mode: str  # short, detailed
+    current_round: int  # 1-4 for detailed interviews
+    current_difficulty: str  # easy, medium, hard
+    round_results: List[dict]  # List of RoundResult dicts
+    termination_reason: Optional[str]  # Why interview ended early
 
 # Pydantic models for API requests/responses
 class InterviewStartRequest(BaseModel):
     role: str = Field(..., min_length=1, description="Job role for the interview")
     company: str = Field(..., min_length=1, description="Company name")
     resume_text: str = Field(..., min_length=10, description="Resume text content")
+    interview_mode: str = Field(default="short", description="Interview mode: short or detailed")
+
 
 class AnswerSubmissionRequest(BaseModel):
     thread_id: str = Field(..., description="Thread ID of the interview session")
-    question_number: int = Field(..., ge=1, le=3, description="Question number (1-3)")
+    question_number: int = Field(..., ge=1, description="Question number (1-based, no upper limit for detailed)")
     answer: str = Field(..., min_length=1, description="Answer to the question")
+    round_number: Optional[int] = Field(default=None, description="Round number for detailed interviews (1-4)")
 
 class ChatHistoryResponse(BaseModel):
     thread_id: str
@@ -191,6 +258,32 @@ class InterviewSessionResponse(BaseModel):
     average_score: float
     is_pinned: bool = False
     created_at: datetime
+    # NEW: Fields for detailed interviews
+    interview_mode: str = "short"
+    current_round: int = 1
+    rounds_attempted: int = 0
+    termination_reason: Optional[str] = None
+
+
+class DetailedInterviewResultResponse(BaseModel):
+    """Response model for detailed interview results."""
+    thread_id: str
+    session_id: int
+    role: str
+    company: str
+    status: str
+    interview_mode: str
+    rounds_attempted: int
+    round_results: List[Dict[str, Any]]  # List of RoundResult dicts
+    final_round_reached: int
+    termination_reason: Optional[str]
+    total_score: float
+    average_score: float
+    strengths: List[str]
+    weak_areas: List[str]
+    roadmap: str
+    created_at: datetime
+    completed_at: Optional[datetime]
 
 # OTP related models
 class ForgotPasswordRequest(BaseModel):

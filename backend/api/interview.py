@@ -13,13 +13,14 @@ import json
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models import InterviewState, InterviewSession, ChatMessage, User
+from models import InterviewState, InterviewSession, ChatMessage, User, InterviewMode
 from database import get_db
 from common import extract_resume_text
 from generator import generate_question
 from feedback import feedback_generator
 from roadmap import generate_roadmap
 from cache import cache
+from detailed_interview import detailed_interview_manager, ROUND_CONFIG
 
 # Import authentication
 from api.auth import get_current_user, get_current_user_optional
@@ -114,6 +115,11 @@ async def start_interview(
         role = interview_data.get("role")
         company = interview_data.get("company")
         resume_text = interview_data.get("resume_text", "")
+        interview_mode = interview_data.get("interview_mode", "short")  # NEW: Get interview mode
+        
+        # Validate interview mode
+        if interview_mode not in ["short", "detailed"]:
+            interview_mode = "short"
 
         if not role or not company:
             raise HTTPException(status_code=400, detail="Missing required fields: role, company")
@@ -131,9 +137,22 @@ async def start_interview(
             "roadmap": "",
         }
 
-        # Generate questions directly
-        gen = generate_question(initial_state)
-        questions = gen.get("question", [])
+        # Generate questions based on interview mode
+        if interview_mode == "detailed":
+            # For detailed mode, generate questions for Round 1 (Screening)
+            from models import DifficultyLevel, RoundType
+            questions = detailed_interview_manager.generate_round_questions(
+                role=role,
+                company=company,
+                resume_text=resume_text,
+                round_number=1,
+                difficulty=DifficultyLevel.MEDIUM
+            )
+        else:
+            # Short mode: use existing question generator
+            gen = generate_question(initial_state)
+            questions = gen.get("question", [])
+            
         if not questions or len(questions) < 3:
             raise HTTPException(status_code=500, detail="Failed to generate interview questions")
         
@@ -150,15 +169,22 @@ async def start_interview(
                 session_id = f"session_{uuid.uuid4().hex}"
                 break
         
-        # Create database session
+        # Create database session with interview mode
         db_session = InterviewSession(
-            user_id=current_user.id if current_user else None,  # Link to user if authenticated
+            user_id=current_user.id if current_user else None,
             thread_id=session_id,
             role=role,
             company=company,
             status="in_progress",
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
+            # NEW: Interview mode fields
+            interview_mode=interview_mode,
+            current_round=1,
+            rounds_attempted=0,
+            round_results=None,
+            termination_reason=None,
+            current_difficulty="medium"
         )
         db.add(db_session)
         db.commit()
@@ -172,15 +198,30 @@ async def start_interview(
         interview_sessions[session_id] = {
             "state": initial_state,
             "questions": questions,
+            "interview_mode": interview_mode,
+            "current_round": 1,
+            "round_results": [],
+            "current_difficulty": "medium"
         }
         
-        return {
+        # Prepare response based on interview mode
+        response = {
             "message": "Interview started successfully",
             "session_id": session_id,
             "questions": questions,
             "role": role,
-            "company": company
+            "company": company,
+            "interview_mode": interview_mode
         }
+        
+        # Add detailed interview specific info
+        if interview_mode == "detailed":
+            response["current_round"] = 1
+            response["round_name"] = ROUND_CONFIG[1]["name"]
+            response["total_rounds"] = 4
+            response["round_description"] = ROUND_CONFIG[1]["description"]
+        
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -326,12 +367,229 @@ async def submit_answers(
             "roadmap": complete_state["roadmap"],
             "total_score": total_score,
             "average_score": avg_score,
+            "fit_percentage": min(100, int((avg_score / 10) * 100)),  # Calculate fit percentage
         }
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error completing interview: {str(e)}")
+
+
+@router.post("/submit-round")
+async def submit_round_answers(
+    session_data: Dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_optional)
+):
+    """Submit answers for a round in detailed interview and get evaluation.
+    
+    This endpoint handles round progression in detailed interviews:
+    - Evaluates answers with multi-dimensional scoring
+    - Determines if candidate passed the round
+    - Either advances to next round or terminates interview
+    """
+    try:
+        from models import DifficultyLevel, RoundType, QuestionScore, RoundResult
+        
+        session_id = session_data.get("session_id")
+        answers = session_data.get("answers", [])
+        round_number = session_data.get("round_number", 1)
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="Session ID is required")
+        
+        # Get session from database
+        session = db.query(InterviewSession).filter(
+            InterviewSession.thread_id == session_id
+        ).first()
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Verify this is a detailed interview
+        if session.interview_mode != "detailed":
+            raise HTTPException(
+                status_code=400, 
+                detail="This endpoint is only for detailed interviews. Use /submit-answers for short interviews."
+            )
+        
+        # Get session data from memory
+        if session_id not in interview_sessions:
+            raise HTTPException(status_code=404, detail="Session data not found")
+        
+        session_memory = interview_sessions[session_id]
+        questions = session_memory.get("questions", [])
+        current_difficulty = session_memory.get("current_difficulty", "medium")
+        
+        if len(answers) != len(questions):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Expected {len(questions)} answers, got {len(answers)}"
+            )
+        
+        # Evaluate each answer
+        scores: list[QuestionScore] = []
+        round_type = ROUND_CONFIG[round_number]["type"]
+        
+        for i, (question, answer) in enumerate(zip(questions, answers)):
+            score = detailed_interview_manager.evaluate_answer(
+                question=question,
+                answer=answer,
+                role=session.role,
+                company=session.company,
+                round_type=round_type
+            )
+            scores.append(score)
+            
+            # Adapt difficulty for next question (within round)
+            if i < len(questions) - 1:
+                new_difficulty = detailed_interview_manager.adapt_difficulty(
+                    score.average, 
+                    DifficultyLevel(current_difficulty)
+                )
+                current_difficulty = new_difficulty.value
+        
+        # Calculate round average
+        round_avg = sum(s.average for s in scores) / len(scores) if scores else 0
+        
+        # Determine if passed
+        passed = detailed_interview_manager.should_pass_round(scores, round_number)
+        
+        # Create round result
+        round_result = RoundResult(
+            round_number=round_number,
+            round_type=round_type.value,
+            questions=questions,
+            answers=answers,
+            scores=scores,
+            average_score=round_avg,
+            passed=passed,
+            difficulty_used=current_difficulty
+        )
+        
+        # Store round result
+        round_results = session_memory.get("round_results", [])
+        round_results.append(round_result.model_dump())
+        session_memory["round_results"] = round_results
+        
+        # Update database
+        session.rounds_attempted = round_number
+        session.round_results = round_results
+        session.current_difficulty = current_difficulty
+        
+        # Prepare response
+        response = {
+            "session_id": session_id,
+            "round_number": round_number,
+            "round_name": ROUND_CONFIG[round_number]["name"],
+            "passed": passed,
+            "average_score": round(round_avg, 2),
+            "scores": [s.model_dump() for s in scores],
+            "round_summary": detailed_interview_manager.generate_round_summary(round_result)
+        }
+        
+        if passed and round_number < 4:
+            # Advance to next round
+            next_round = round_number + 1
+            session.current_round = next_round
+            session_memory["current_round"] = next_round
+            
+            # Generate questions for next round
+            next_questions = detailed_interview_manager.generate_round_questions(
+                role=session.role,
+                company=session.company,
+                resume_text=session.resume_text or "",
+                round_number=next_round,
+                difficulty=DifficultyLevel(current_difficulty),
+                previous_qa=[{"question": q, "answer": a} for q, a in zip(questions, answers)]
+            )
+            session_memory["questions"] = next_questions
+            
+            # Calculate fit percentage (performance so far)
+            fit_percentage = min(100, int((round_avg / 10) * 100))
+            
+            response["next_round"] = next_round
+            response["next_round_name"] = ROUND_CONFIG[next_round]["name"]
+            response["next_round_description"] = ROUND_CONFIG[next_round]["description"]
+            response["next_questions"] = next_questions
+            response["interview_continues"] = True
+            response["fit_percentage"] = fit_percentage
+            response["message"] = f"Great work! You've passed {ROUND_CONFIG[round_number]['name']}. Moving to {ROUND_CONFIG[next_round]['name']}!"
+        else:
+            # Interview ends (either failed or completed all rounds)
+            if passed and round_number == 4:
+                session.status = "completed"
+                session.termination_reason = "Completed all rounds successfully"
+                fit_percentage = min(100, int((round_avg / 10) * 100))
+                response["message"] = "🎉 Congratulations! You completed all 4 rounds successfully!"
+                response["fit_percentage"] = fit_percentage
+            else:
+                session.status = "terminated"
+                session.termination_reason = f"Did not pass Round {round_number}: {ROUND_CONFIG[round_number]['name']}"
+                
+                # Calculate fit percentage based on performance
+                fit_percentage = min(100, int((round_avg / 10) * 100))
+                
+                # Threshold they needed to pass
+                pass_threshold = ROUND_CONFIG[round_number]["pass_threshold"]
+                
+                # Generate sympathetic, constructive messaging
+                response["message"] = (
+                    f"Thank you for participating in the interview. Unfortunately, we are unable to move you "
+                    f"to Round {round_number + 1} ({ROUND_CONFIG.get(round_number + 1, {}).get('name', 'next round') if round_number < 4 else 'completion'}) "
+                    f"at this time. Your performance in {ROUND_CONFIG[round_number]['name']} scored {round_avg:.1f}/10, "
+                    f"which is below the required threshold of {pass_threshold}/10."
+                )
+                response["fit_percentage"] = fit_percentage
+                response["improvement_needed"] = round(pass_threshold - round_avg, 1)
+            
+            session.completed_at = datetime.utcnow()
+            
+            # Generate final report
+            all_round_results = [RoundResult(**r) for r in round_results]
+            final_report = detailed_interview_manager.generate_final_report(
+                role=session.role,
+                company=session.company,
+                all_round_results=all_round_results,
+                termination_reason=session.termination_reason
+            )
+            
+            response["interview_continues"] = False
+            response["final_report"] = final_report
+            response["roadmap"] = final_report.get("roadmap", "")
+            response["strengths"] = final_report.get("strengths", [])
+            response["weak_areas"] = final_report.get("weak_areas", [])
+            
+            # Calculate overall scores
+            total_avg = sum(r.average_score for r in all_round_results) / len(all_round_results)
+            session.average_score = total_avg
+            session.total_score = sum(
+                sum(s.average for s in RoundResult(**r).scores) 
+                for r in round_results
+            )
+            
+            # Clean up memory
+            if session_id in interview_sessions:
+                del interview_sessions[session_id]
+        
+        session.updated_at = datetime.utcnow()
+        db.commit()
+        
+        # Invalidate cache
+        if current_user:
+            cache.delete(f"analytics:user:{current_user.id}")
+        cache.invalidate_pattern("leaderboard:")
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error processing round: {str(e)}")
 
 @router.get("/session/{session_id}")
 async def get_session(session_id: str, db: Session = Depends(get_db)):

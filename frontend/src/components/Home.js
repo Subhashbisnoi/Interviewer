@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, Brain, User, BarChart3, ArrowRight } from 'lucide-react';
+import { Upload, FileText, Brain, User, BarChart3, ArrowRight, Clock, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import AuthModal from './auth/AuthModal';
-import GoogleAd from './GoogleAd';
+
 import SEO from './SEO';
 
 const Home = ({ onStartInterview }) => {
@@ -21,6 +21,7 @@ const Home = ({ onStartInterview }) => {
   const [error, setError] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState(null);
+  const [interviewMode, setInterviewMode] = useState('short'); // 'short' or 'detailed'
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -66,7 +67,8 @@ const Home = ({ onStartInterview }) => {
     const interviewData = {
       role: formData.role.trim(),
       company: formData.company.trim(),
-      resumeFile
+      resumeFile,
+      interviewMode
     };
 
     if (!user) {
@@ -138,7 +140,8 @@ const Home = ({ onStartInterview }) => {
           body: JSON.stringify({
             role: data.role,
             company: data.company,
-            resume_text: resume_text
+            resume_text: resume_text,
+            interview_mode: data.interviewMode || 'short'
           })
         }
       );
@@ -162,7 +165,10 @@ const Home = ({ onStartInterview }) => {
         company: data.company,
         resume_text: resume_text,
         questions: interviewResult.questions,
-        session_id: interviewResult.session_id
+        session_id: interviewResult.session_id,
+        interview_mode: interviewResult.interview_mode,
+        current_round: interviewResult.current_round,
+        round_name: interviewResult.round_name
       });
 
       toast.success('Interview ready! Let\'s begin!');
@@ -260,6 +266,57 @@ const Home = ({ onStartInterview }) => {
               />
             </div>
 
+            {/* Interview Mode Selector */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Interview Mode
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setInterviewMode('short')}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${interviewMode === 'short'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                    }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className={`w-5 h-5 ${interviewMode === 'short' ? 'text-indigo-600' : 'text-gray-400'}`} />
+                    <span className={`font-semibold ${interviewMode === 'short' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      Short Interview
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    3 questions • Quick practice • ~10 min
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterviewMode('detailed')}
+                  className={`p-4 rounded-lg border-2 transition-all text-left ${interviewMode === 'detailed'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                    }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className={`w-5 h-5 ${interviewMode === 'detailed' ? 'text-indigo-600' : 'text-gray-400'}`} />
+                    <span className={`font-semibold ${interviewMode === 'detailed' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                      Detailed Interview
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    4 rounds • Adaptive • ~30-45 min
+                  </p>
+                </button>
+              </div>
+              {interviewMode === 'detailed' && (
+                <p className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <Brain className="w-3 h-3" />
+                  Includes: Screening → Core Skills → Problem-Solving → Bar Raiser
+                </p>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Upload Resume (PDF)
@@ -346,14 +403,7 @@ const Home = ({ onStartInterview }) => {
           </div>
         </div>
 
-        {/* Google AdSense - Horizontal Banner */}
-        <div className="mb-8">
-          <GoogleAd
-            slot="1234567890"
-            format="horizontal"
-            responsive={true}
-          />
-        </div>
+
 
         <AuthModal
           isOpen={showAuthModal}
@@ -363,8 +413,8 @@ const Home = ({ onStartInterview }) => {
           }}
           initialMode="login"
         />
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

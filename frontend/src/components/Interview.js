@@ -1,20 +1,25 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { useToast } from '../contexts/ToastContext';
 import RoboInterviewer from './interview/RoboInterviewer';
 import VoiceRecorder from './VoiceRecorder';
 
 const Interview = ({ interviewData, onSessionCreated }) => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState(Array(interviewData.questions?.length).fill(''));
+  const [questions, setQuestions] = useState(interviewData.questions || []);
+  const [answers, setAnswers] = useState(Array(interviewData.questions?.length || 0).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [transcribedAnswer, setTranscribedAnswer] = useState('');
   const videoMeetingRef = useRef(null);
   const roboInterviewerRef = useRef(null);
 
-  const questions = interviewData.questions || [];
+  // Track current round for detailed mode
+  const [currentRound, setCurrentRound] = useState(interviewData.current_round || 1);
+  const [roundName, setRoundName] = useState(interviewData.round_name || 'Screening');
 
   const handleAnswerChange = (value) => {
     const newAnswers = [...answers];
@@ -49,13 +54,24 @@ const Interview = ({ interviewData, onSessionCreated }) => {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/submit-answers`, {
+      const isDetailed = interviewData.interview_mode === 'detailed';
+      const endpoint = isDetailed
+        ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/submit-round`
+        : `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/submit-answers`;
+
+      const payload = {
+        session_id: interviewData.session_id,
+        answers: answers
+      };
+
+      if (isDetailed) {
+        payload.round_number = currentRound;
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          session_id: interviewData.session_id,
-          answers: answers
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -64,20 +80,57 @@ const Interview = ({ interviewData, onSessionCreated }) => {
 
       const result = await response.json();
 
-      onSessionCreated({
-        ...interviewData,
-        thread_id: interviewData.session_id,
-        answers: answers,
-        feedback: result.feedback,
-        roadmap: result.roadmap,
-        total_score: result.total_score,
-        average_score: result.average_score,
-        is_pinned: false
-      });
+      if (isDetailed && result.interview_continues) {
+        // Handle transition to next round
+        toast.success(result.message || `Round ${currentRound} Complete! Moving to next round...`);
 
-      navigate('/results');
+        // Update state for next round
+        setQuestions(result.next_questions);
+        setCurrentRound(result.next_round);
+        setRoundName(result.next_round_name);
+
+        // Reset answers for new questions
+        setAnswers(Array(result.next_questions.length).fill(''));
+        setCurrentQuestion(0);
+        setTranscribedAnswer('');
+
+        // Scroll to top
+        window.scrollTo(0, 0);
+      } else {
+        // Interview complete (or failed round)
+        if (isDetailed && result.message) {
+          if (result.passed) {
+            toast.success(result.message);
+          } else {
+            toast.info(result.message);
+          }
+        }
+
+        onSessionCreated({
+          ...interviewData,
+          thread_id: interviewData.session_id,
+          answers: answers,
+          feedback: isDetailed && result.scores ? result.scores.map(s => ({
+            marks: (s.correctness + s.clarity + s.structure + s.depth) / 4 * 10, // Assuming 0-10 scale for each, multiply by 10/10? No wait, backend returns 0-10.
+            // Wait, QuestionScore has 0-10. Average property returns 0-10.
+            // But Result.js expects marks to be comparable. getScoreColor checks >=8.
+            // Let's explicitly calculate average if not present.
+            marks: Math.round(((s.correctness + s.clarity + s.structure + s.depth) / 4) * 10) / 10,
+            feedback: s.feedback
+          })) : result.feedback,
+          roadmap: result.roadmap,
+          total_score: result.total_score || (result.scores ? result.scores.reduce((acc, s) => acc + ((s.correctness + s.clarity + s.structure + s.depth) / 4), 0) : 0),
+          average_score: result.average_score,
+          is_pinned: false,
+          fit_percentage: result.fit_percentage,
+          questions: questions
+        });
+
+        navigate('/results');
+      }
     } catch (err) {
       setError(err.message || 'Something went wrong');
+      toast.error(err.message || 'Failed to submit. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,7 +147,18 @@ const Interview = ({ interviewData, onSessionCreated }) => {
               </svg>
             </div>
             <div>
-              <h1 className="text-white font-semibold">AI Interview</h1>
+              <h1 className="text-white font-semibold flex items-center gap-2">
+                {interviewData.interview_mode === 'detailed' ? (
+                  <>
+                    <span className="bg-blue-900 text-blue-200 px-2 py-0.5 rounded text-xs uppercase tracking-wider">
+                      Round {currentRound}
+                    </span>
+                    {roundName}
+                  </>
+                ) : (
+                  'AI Interview'
+                )}
+              </h1>
               <p className="text-gray-400 text-sm">
                 {interviewData.role} {interviewData.company && `at ${interviewData.company}`}
               </p>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Trophy, Medal, Award, TrendingUp, Users, Filter, Crown, Star, Target, Zap } from 'lucide-react';
-import GoogleAd from './GoogleAd';
+
 
 const Leaderboard = () => {
   const { user } = useAuth();
@@ -220,9 +220,8 @@ const Leaderboard = () => {
             {leaderboard.map((entry, index) => (
               <div
                 key={index}
-                className={`px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                  entry.is_current_user ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500' : ''
-                }`}
+                className={`px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${entry.is_current_user ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500' : ''
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1">
@@ -232,11 +231,10 @@ const Leaderboard = () => {
                     {/* User Info */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className={`text-lg font-semibold ${
-                          entry.is_current_user 
-                            ? 'text-indigo-700 dark:text-indigo-300' 
+                        <h3 className={`text-lg font-semibold ${entry.is_current_user
+                            ? 'text-indigo-700 dark:text-indigo-300'
                             : 'text-gray-900 dark:text-white'
-                        }`}>
+                          }`}>
                           {entry.display_name}
                         </h3>
                         {entry.is_current_user && (
@@ -372,15 +370,8 @@ const Leaderboard = () => {
           </div>
         </div>
       </div>
-      
-      {/* Google AdSense - Bottom Banner */}
-      <div className="mt-8">
-        <GoogleAd 
-          slot="4567890123"
-          format="horizontal"
-          responsive={true}
-        />
-      </div>
+
+
     </div>
   );
 };

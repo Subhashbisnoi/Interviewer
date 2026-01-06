@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
 import { Target, Users, Award, Zap } from 'lucide-react';
-import GoogleAd from '../components/GoogleAd';
+
 
 const About = () => {
   return (
@@ -135,14 +135,7 @@ const About = () => {
           </button>
         </div>
 
-        {/* Google AdSense - Bottom Banner */}
-        <div className="mt-8">
-          <GoogleAd
-            slot="5678901234"
-            format="horizontal"
-            responsive={true}
-          />
-        </div>
+
       </div>
     </div>
   );

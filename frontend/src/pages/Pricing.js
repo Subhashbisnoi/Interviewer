@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Check, X, Zap, Crown, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import GoogleAd from '../components/GoogleAd';
+
 
 const Pricing = () => {
   const [plans, setPlans] = useState(null);
@@ -62,7 +62,7 @@ const Pricing = () => {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       // Create order
       const orderResponse = await fetch(
         `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/create-order`,
@@ -77,7 +77,7 @@ const Pricing = () => {
       );
 
       const orderData = await orderResponse.json();
-      
+
       if (!orderData.success) {
         throw new Error('Failed to create order');
       }
@@ -109,7 +109,7 @@ const Pricing = () => {
           );
 
           const verifyData = await verifyResponse.json();
-          
+
           if (verifyData.success) {
             alert('Payment successful! Your premium subscription is now active.');
             window.location.reload();
@@ -180,14 +180,14 @@ const Pricing = () => {
               </p>
             </div>
           </div>
-          
+
           {expiryDate && (
             <div className="mt-6 text-center">
               <p className="text-gray-600 dark:text-gray-400">
-                Your subscription expires on {expiryDate.toLocaleDateString('en-IN', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                Your subscription expires on {expiryDate.toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
                 })}
               </p>
             </div>
@@ -259,22 +259,22 @@ const Pricing = () => {
                 Current Plan: {subscription.tier === 'premium' ? '👑 Premium' : '🆓 Free'}
               </p>
               <p className="text-xs text-blue-500 dark:text-blue-300 mt-1">
-                {subscription.tier === 'free' 
+                {subscription.tier === 'free'
                   ? `${subscription.interviews_remaining || 0} interviews remaining this month`
                   : subscription.expires_at ? (() => {
-                      const expiryDate = new Date(subscription.expires_at);
-                      const today = new Date();
-                      const diffTime = expiryDate.getTime() - today.getTime();
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      
-                      if (diffDays > 0) {
-                        return `Unlimited interviews • ${diffDays} days remaining`;
-                      } else if (diffDays === 0) {
-                        return 'Unlimited interviews • Expires today';
-                      } else {
-                        return 'Unlimited interviews • Subscription expired';
-                      }
-                    })() : 'Unlimited interviews • Active'
+                    const expiryDate = new Date(subscription.expires_at);
+                    const today = new Date();
+                    const diffTime = expiryDate.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays > 0) {
+                      return `Unlimited interviews • ${diffDays} days remaining`;
+                    } else if (diffDays === 0) {
+                      return 'Unlimited interviews • Expires today';
+                    } else {
+                      return 'Unlimited interviews • Subscription expired';
+                    }
+                  })() : 'Unlimited interviews • Active'
                 }
               </p>
             </div>
@@ -290,7 +290,7 @@ const Pricing = () => {
             <Shield className="h-8 w-8 text-gray-500 mr-3" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Free</h2>
           </div>
-          
+
           <div className="mb-6">
             <span className="text-4xl font-bold text-gray-900 dark:text-white">₹0</span>
             <span className="text-gray-600 dark:text-gray-400">/month</span>
@@ -325,14 +325,14 @@ const Pricing = () => {
             <Crown className="h-8 w-8 text-yellow-300 mr-3" />
             <h2 className="text-2xl font-bold text-white">Premium</h2>
           </div>
-          
+
           <div className="mb-2">
             <span className="text-4xl font-bold text-white">
               ₹{plans?.plans?.monthly?.amount_inr}
             </span>
             <span className="text-primary-100">/month</span>
           </div>
-          
+
           <p className="text-primary-100 text-sm mb-6">
             or ₹{plans?.plans?.yearly?.amount_inr}/year (Save ₹{plans?.plans?.monthly?.amount_inr ? ((plans.plans.monthly.amount_inr * 12) - plans.plans.yearly.amount_inr).toFixed(0) : '89'})
           </p>
@@ -355,7 +355,7 @@ const Pricing = () => {
               <Zap className="h-5 w-5 mr-2" />
               {subscription?.tier === 'premium' ? 'Current Plan' : 'Upgrade Monthly'}
             </button>
-            
+
             <button
               onClick={() => handleUpgrade('yearly')}
               disabled={subscription?.tier === 'premium'}
@@ -372,7 +372,7 @@ const Pricing = () => {
         <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
           Frequently Asked Questions
         </h3>
-        
+
         <div className="space-y-4">
           <details className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
             <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer">
@@ -402,15 +402,8 @@ const Pricing = () => {
           </details>
         </div>
       </div>
-      
-      {/* Google AdSense - Bottom Banner */}
-      <div className="mt-12">
-        <GoogleAd 
-          slot="3456789012"
-          format="horizontal"
-          responsive={true}
-        />
-      </div>
+
+
     </div>
   );
 };

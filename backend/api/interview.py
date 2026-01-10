@@ -354,6 +354,7 @@ async def submit_answers(
         # Invalidate cache after completing interview
         if current_user:
             cache.delete(f"analytics:user:{current_user.id}")
+            cache.delete(f"sessions:user:{current_user.id}")
         cache.invalidate_pattern("leaderboard:")
 
         # Clean up in-memory session
@@ -579,6 +580,7 @@ async def submit_round_answers(
         # Invalidate cache
         if current_user:
             cache.delete(f"analytics:user:{current_user.id}")
+            cache.delete(f"sessions:user:{current_user.id}")
         cache.invalidate_pattern("leaderboard:")
         
         return response
@@ -612,6 +614,12 @@ async def get_session(session_id: str, db: Session = Depends(get_db)):
 @router.get("/session/{session_id}/chat")
 async def get_session_chat_history(session_id: str, db: Session = Depends(get_db)):
     """Get chat history for a specific session."""
+    # Check cache first (5 minutes TTL for chat history)
+    cache_key = f"chat_history:{session_id}"
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
     # Check if session exists
     session = db.query(InterviewSession).filter(InterviewSession.thread_id == session_id).first()
     if not session:
@@ -622,7 +630,7 @@ async def get_session_chat_history(session_id: str, db: Session = Depends(get_db
         ChatMessage.session_id == session.id
     ).order_by(ChatMessage.created_at.asc()).all()
     
-    return {
+    result = {
         "session_id": session_id,
         "messages": [
             {
@@ -636,6 +644,10 @@ async def get_session_chat_history(session_id: str, db: Session = Depends(get_db
             for msg in messages
         ]
     }
+    
+    # Cache for 5 minutes (chat history is mostly static)
+    cache.set(cache_key, result, ttl=300)
+    return result
 
 @router.get("/sessions")
 async def list_sessions(
@@ -643,24 +655,43 @@ async def list_sessions(
     db: Session = Depends(get_db)
 ):
     """List all interview sessions for the current user."""
+    import time
+    start_time = time.time()
+    
     try:
+        # Check cache first (60 seconds TTL for sessions list)
+        cache_key = f"sessions:user:{current_user.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            print(f"TIMING: Cache HIT - returning cached sessions")
+            return cached_data
+        
         # Get all sessions for the current user
+        t1 = time.time()
         sessions = db.query(InterviewSession).filter(
             InterviewSession.user_id == current_user.id
         ).order_by(InterviewSession.created_at.desc()).all()
+        t2 = time.time()
+        print(f"TIMING: Session query took {t2-t1:.3f}s")
         
         print(f"DEBUG: Found {len(sessions)} sessions for user {current_user.email}")
+        
+        # Batch query: Get all session IDs that have feedback (single query instead of N queries)
+        t3 = time.time()
+        session_ids = [s.id for s in sessions]
+        sessions_with_feedback = set(
+            row[0] for row in db.query(ChatMessage.session_id).filter(
+                ChatMessage.session_id.in_(session_ids),
+                ChatMessage.message_type == "feedback"
+            ).distinct().all()
+        ) if session_ids else set()
+        t4 = time.time()
+        print(f"TIMING: Feedback batch query took {t4-t3:.3f}s")
         
         # Format sessions for the frontend
         formatted_sessions = []
         for session in sessions:
-            # Check if session has feedback messages (completed)
-            has_feedback = db.query(ChatMessage).filter(
-                ChatMessage.session_id == session.id,
-                ChatMessage.message_type == "feedback"
-            ).first() is not None
-            
-            print(f"DEBUG: Session {session.thread_id} - status: {session.status}, has_feedback: {has_feedback}, score: {session.average_score}")
+            has_feedback = session.id in sessions_with_feedback
             
             session_data = {
                 "thread_id": session.thread_id,  # Use thread_id for frontend consistency
@@ -676,8 +707,14 @@ async def list_sessions(
             
             formatted_sessions.append(session_data)
         
-        print(f"DEBUG: Returning {len(formatted_sessions)} formatted sessions")
-        return {"sessions": formatted_sessions}
+        result = {"sessions": formatted_sessions}
+        
+        # Cache the result for 60 seconds
+        cache.set(cache_key, result, ttl=60)
+        
+        t5 = time.time()
+        print(f"TIMING: Total endpoint time: {t5-start_time:.3f}s")
+        return result
         
     except Exception as e:
         print(f"Error fetching sessions: {e}")
@@ -705,22 +742,26 @@ async def get_analytics(
         
         total_interviews = len(sessions)
         
+        # Batch query: Get all session IDs that have feedback (single query instead of N queries)
+        session_ids = [s.id for s in sessions]
+        sessions_with_feedback = set(
+            row[0] for row in db.query(ChatMessage.session_id).filter(
+                ChatMessage.session_id.in_(session_ids),
+                ChatMessage.message_type == "feedback"
+            ).distinct().all()
+        ) if session_ids else set()
+        
         # Get completed sessions (those with feedback)
         completed_sessions = []
         companies = set()
         roles = set()
         
         for session in sessions:
+            has_feedback = session.id in sessions_with_feedback
             print(f"DEBUG: Session {session.thread_id} - status: {session.status}, avg_score: {session.average_score}")
             
             companies.add(session.company)
             roles.add(session.role)
-            
-            # Check if session has feedback (is completed)
-            has_feedback = db.query(ChatMessage).filter(
-                ChatMessage.session_id == session.id,
-                ChatMessage.message_type == "feedback"
-            ).first() is not None
             
             print(f"DEBUG: Session {session.thread_id} has_feedback: {has_feedback}")
             
@@ -812,6 +853,10 @@ async def pin_interview_session(
         session.is_pinned = True
         db.commit()
         
+        # Invalidate caches
+        cache.delete(f"pinned:user:{current_user.id}")
+        cache.delete(f"sessions:user:{current_user.id}")
+        
         return {"message": "Session pinned successfully", "is_pinned": True}
         
     except HTTPException:
@@ -842,6 +887,10 @@ async def unpin_interview_session(
         session.is_pinned = False
         db.commit()
         
+        # Invalidate caches
+        cache.delete(f"pinned:user:{current_user.id}")
+        cache.delete(f"sessions:user:{current_user.id}")
+        
         return {"message": "Session unpinned successfully", "is_pinned": False}
         
     except HTTPException:
@@ -858,21 +907,43 @@ async def get_pinned_sessions(
 ):
     """Get all pinned interview sessions for the current user."""
     try:
+        # Check cache first (60 seconds TTL)
+        cache_key = f"pinned:user:{current_user.id}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+        
         sessions = db.query(InterviewSession).filter(
             InterviewSession.user_id == current_user.id,
             InterviewSession.is_pinned == True
         ).order_by(InterviewSession.updated_at.desc()).all()
         
+        if not sessions:
+            result = {"pinned_sessions": []}
+            cache.set(cache_key, result, ttl=60)
+            return result
+        
+        # Batch query: Get all messages for all pinned sessions at once
+        session_ids = [s.id for s in sessions]
+        all_messages = db.query(ChatMessage).filter(
+            ChatMessage.session_id.in_(session_ids),
+            ChatMessage.message_type.in_(["feedback", "roadmap"])
+        ).all()
+        
+        # Group messages by session_id
+        messages_by_session = {}
+        for msg in all_messages:
+            if msg.session_id not in messages_by_session:
+                messages_by_session[msg.session_id] = []
+            messages_by_session[msg.session_id].append(msg)
+        
         sessions_data = []
         for session in sessions:
-            # Get the last few messages for context
-            messages = db.query(ChatMessage).filter(
-                ChatMessage.session_id == session.id
-            ).order_by(ChatMessage.created_at.desc()).limit(10).all()
+            session_messages = messages_by_session.get(session.id, [])
             
             # Extract feedback and roadmap if available
-            feedback_msg = next((msg for msg in messages if msg.message_type == "feedback"), None)
-            roadmap_msg = next((msg for msg in messages if msg.message_type == "roadmap"), None)
+            feedback_msg = next((msg for msg in session_messages if msg.message_type == "feedback"), None)
+            roadmap_msg = next((msg for msg in session_messages if msg.message_type == "roadmap"), None)
             
             session_data = {
                 "thread_id": session.thread_id,
@@ -883,14 +954,16 @@ async def get_pinned_sessions(
                 "total_score": session.total_score,
                 "average_score": session.average_score,
                 "is_pinned": session.is_pinned,
-                "created_at": session.created_at,
-                "completed_at": session.completed_at,
+                "created_at": session.created_at.isoformat() if session.created_at else None,
+                "completed_at": session.completed_at.isoformat() if session.completed_at else None,
                 "feedback": feedback_msg.content if feedback_msg else None,
                 "roadmap": roadmap_msg.content if roadmap_msg else None
             }
             sessions_data.append(session_data)
         
-        return {"pinned_sessions": sessions_data}
+        result = {"pinned_sessions": sessions_data}
+        cache.set(cache_key, result, ttl=60)
+        return result
         
     except Exception as e:
         print(f"Error fetching pinned sessions: {e}")

@@ -28,28 +28,28 @@ ROUND_CONFIG = {
     1: {
         "name": "Screening Round",
         "type": RoundType.SCREENING,
-        "pass_threshold": 5.5,
-        "questions_count": 3,
+        "pass_threshold": 5,
+        "questions_count": 5,
         "description": "Fundamentals & communication check"
     },
     2: {
         "name": "Core Skills Round", 
         "type": RoundType.CORE_SKILLS,
-        "pass_threshold": 6.0,
-        "questions_count": 3,
+        "pass_threshold": 5,
+        "questions_count": 4,
         "description": "Applied understanding & reasoning"
     },
     3: {
         "name": "Advanced/Problem-Solving Round",
         "type": RoundType.ADVANCED,
-        "pass_threshold": 6.5,
+        "pass_threshold": 5.5,
         "questions_count": 3,
         "description": "Scenario-based thinking & trade-offs"
     },
     4: {
         "name": "Bar Raiser Round",
         "type": RoundType.BAR_RAISER,
-        "pass_threshold": 7.0,
+        "pass_threshold": 6.5,
         "questions_count": 3,
         "description": "Senior-level thinking & ownership"
     }
@@ -64,6 +64,7 @@ Generate questions for a SCREENING round. Focus on:
 - Basic conceptual understanding
 - Simple behavioral questions
 Questions should test fundamentals and communication clarity.
+IMPORTANT: IN THIS ROUND DON'T ASK QUESTION FROM RESUME
 """,
     RoundType.CORE_SKILLS: """
 Generate questions for a CORE SKILLS round. Focus on:
@@ -138,10 +139,10 @@ class DetailedInterviewManager:
 
 Generate exactly {round_config['questions_count']} questions that:
 1. Are tailored to the role and company
-2. Build on the candidate's resume
+2. Build on the candidate's resume(exept round 1) but it has to be role oriented
 3. Match the difficulty level specified
 4. Are different from any previous questions asked
-
+5. if something is written in resume but irrelevant for role then don't ask thst
 Return ONLY the questions, one per line, numbered 1-{round_config['questions_count']}.
 """),
             HumanMessage(content=f"""

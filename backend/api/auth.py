@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
@@ -29,6 +29,7 @@ from database import get_db, SessionLocal
 from models import User, InterviewSession, ChatMessage, OTP, ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest, MessageResponse
 from schemas.auth import UserCreate, UserInDB, Token, TokenData, UserResponse
 from email_utils import send_otp_email, send_password_reset_confirmation_email
+from cache_warming import warm_user_cache
 
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
@@ -61,8 +62,38 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
+# Simple user cache for fast lookups (avoids slow Neon DB queries)
+_user_cache = {}
+_user_cache_ttl = 60  # seconds
+
 def get_user(db: Session, email: str) -> Optional[User]:
-    return db.query(User).filter(User.email == email).first()
+    import time
+    
+    # Check cache first
+    cache_key = f"user:{email}"
+    if cache_key in _user_cache:
+        cached_user, expiry = _user_cache[cache_key]
+        if time.time() < expiry:
+            print(f"USER CACHE HIT: {email}")
+            # Merge cached user into current session to avoid DetachedInstanceError
+            return db.merge(cached_user, load=False)
+        else:
+            del _user_cache[cache_key]
+    
+    # Query database
+    user = db.query(User).filter(User.email == email).first()
+    
+    # Cache the result
+    if user:
+        _user_cache[cache_key] = (user, time.time() + _user_cache_ttl)
+    
+    return user
+
+def invalidate_user_cache(email: str):
+    """Call this when user data changes (password reset, etc.)"""
+    cache_key = f"user:{email}"
+    if cache_key in _user_cache:
+        del _user_cache[cache_key]
 
 def create_user(db: Session, user_data: UserCreate) -> User:
     """Create a new user in the database."""
@@ -237,13 +268,21 @@ async def signup(user_data: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
     """
     Login with email and password to get access token
     """
+    import time
+    start_time = time.time()
+    
     try:
+        t1 = time.time()
         user = authenticate_user(db, form_data.username, form_data.password)
+        t2 = time.time()
+        print(f"TIMING AUTH: authenticate_user took {t2-t1:.3f}s")
+        
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -257,10 +296,20 @@ async def login(
                 detail="Inactive user account"
             )
         
+        t3 = time.time()
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
+        t4 = time.time()
+        print(f"TIMING AUTH: create_access_token took {t4-t3:.3f}s")
+        
+        # Warm cache in background (non-blocking)
+        if background_tasks:
+            background_tasks.add_task(warm_user_cache, user.id, None)
+        
+        total_time = time.time() - start_time
+        print(f"TIMING AUTH: Total login time: {total_time:.3f}s")
         
         return {
             "access_token": access_token,
@@ -383,14 +432,21 @@ async def verify_github_token(code: str) -> dict:
 @router.post("/google", response_model=Token)
 async def google_auth(
     google_data: GoogleCredential,
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
     """
     Authenticate with Google OAuth
     """
+    import time
+    start_time = time.time()
+    
     try:
         # Verify the Google token
+        t1 = time.time()
         user_info = verify_google_token(google_data.credential)
+        t2 = time.time()
+        print(f"TIMING GOOGLE: verify_google_token took {t2-t1:.3f}s")
         
         email = user_info.get('email')
         full_name = user_info.get('name', '')
@@ -402,11 +458,18 @@ async def google_auth(
             )
         
         # Check if user exists
+        t3 = time.time()
         user = get_user(db, email)
+        t4 = time.time()
+        print(f"TIMING GOOGLE: get_user took {t4-t3:.3f}s")
         
         if not user:
             # Create new user for Google OAuth
+            t5 = time.time()
             hashed_password = get_password_hash(secrets.token_hex(32))  # Random password for OAuth users
+            t6 = time.time()
+            print(f"TIMING GOOGLE: get_password_hash took {t6-t5:.3f}s")
+            
             user = User(
                 email=email,
                 full_name=full_name,
@@ -432,10 +495,20 @@ async def google_auth(
             )
         
         # Create access token
+        t7 = time.time()
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
+        t8 = time.time()
+        print(f"TIMING GOOGLE: create_access_token took {t8-t7:.3f}s")
+        
+        # Warm cache in background (non-blocking)
+        if background_tasks:
+            background_tasks.add_task(warm_user_cache, user.id, None)
+        
+        total_time = time.time() - start_time
+        print(f"TIMING GOOGLE: Total auth time: {total_time:.3f}s")
         
         return {
             "access_token": access_token,
@@ -452,6 +525,7 @@ async def google_auth(
 @router.post("/github", response_model=Token)
 async def github_auth(
     github_data: GitHubCredential,
+    background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -505,6 +579,10 @@ async def github_auth(
         access_token = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
+        
+        # Warm cache in background (non-blocking)
+        if background_tasks:
+            background_tasks.add_task(warm_user_cache, user.id, None)
         
         return {
             "access_token": access_token,

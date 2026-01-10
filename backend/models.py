@@ -72,7 +72,7 @@ class InterviewSession(Base):
     __tablename__ = "interview_sessions"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Allow anonymous interviews
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Allow anonymous interviews
     thread_id = Column(String, unique=True, index=True)  # LangGraph thread ID
     role = Column(String)
     company = Column(String)
@@ -102,7 +102,7 @@ class ChatMessage(Base):
     __tablename__ = "chat_messages"
     
     id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("interview_sessions.id"))
+    session_id = Column(Integer, ForeignKey("interview_sessions.id"), index=True)
     thread_id = Column(String, index=True)  # LangGraph thread ID for quick access
     message_type = Column(String)  # question, answer, feedback, roadmap, system
     role = Column(String)  # user, assistant, system

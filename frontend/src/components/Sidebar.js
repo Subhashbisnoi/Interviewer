@@ -168,10 +168,10 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Menu Button - Fixed at far right */}
+      {/* Mobile Menu Button - Fixed at right side in header */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-3 right-4 z-50 p-2 bg-primary-600 text-white rounded-lg shadow-lg hover:bg-primary-700 transition-colors"
+        className="lg:hidden fixed top-4 right-4 z-[60] p-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg shadow-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
         aria-label="Toggle menu"
       >
         {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

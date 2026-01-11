@@ -111,19 +111,27 @@ const Resources = () => {
 
             <section className="py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-12"><h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Company Interview Guides</h2><p className="text-gray-600 dark:text-gray-400">Prepare for interviews at top tech companies</p></div>
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Company Interview Guides</h2>
+                            <p className="text-gray-600 dark:text-gray-400">In-depth interview preparation for top tech companies</p>
+                        </div>
+                        <Link to="/resources/company-guides" className="text-blue-600 dark:text-blue-400 font-medium flex items-center hover:gap-2 transition-all">
+                            View All Details<ArrowRight className="w-4 h-4 ml-1" />
+                        </Link>
+                    </div>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {companyGuides.map((company, index) => (
-                            <div key={index} className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow hover:shadow-lg transition-shadow cursor-pointer group">
+                            <Link to="/resources/company-guides" key={index} className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow hover:shadow-lg transition-all cursor-pointer group hover:-translate-y-1">
                                 <div className="flex items-center gap-4">
                                     <div className="text-3xl">{company.logo}</div>
                                     <div className="flex-1">
-                                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-800">{company.name}</h3>
+                                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{company.name}</h3>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">{company.roles}</p>
                                     </div>
-                                    <span className={`text-xs px-2 py-1 rounded ${company.difficulty === 'Very Hard' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : company.difficulty === 'Hard' ? 'bg-blue-100 text-orange-600 dark:bg-blue-900/30 dark:text-blue-800' : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>{company.difficulty}</span>
+                                    <span className={`text-xs px-2 py-1 rounded font-medium ${company.difficulty === 'Very Hard' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : company.difficulty === 'Hard' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>{company.difficulty}</span>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

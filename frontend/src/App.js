@@ -31,6 +31,7 @@ import InterviewPrepGuide from './pages/guides/InterviewPrepGuide';
 import BehavioralQuestionsGuide from './pages/guides/BehavioralQuestionsGuide';
 import TechnicalPatternsGuide from './pages/guides/TechnicalPatternsGuide';
 import SystemDesignGuide from './pages/guides/SystemDesignGuide';
+import CompanyGuides from './pages/guides/CompanyGuides';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdManager from './components/AdManager';
 import './App.css';
@@ -103,7 +104,7 @@ const AppContent = () => {
       {/* <AdManager /> */}
       <SessionWarningModal />
       {!isInterviewPage && <Sidebar />}
-      <div className={`flex-1 flex flex-col ${!isInterviewPage ? 'lg:ml-64' : ''}`}>
+      <div className={`flex-1 flex flex-col ${!isInterviewPage ? 'lg:ml-64 pt-16' : ''}`}>
         {!isInterviewPage && <Header />}
         <main className={isInterviewPage ? 'flex-1' : 'flex-1 w-full px-4 py-8 lg:container lg:mx-auto'}>
           <Routes>
@@ -207,6 +208,10 @@ const AppContent = () => {
             <Route
               path="/resources/system-design"
               element={<SystemDesignGuide />}
+            />
+            <Route
+              path="/resources/company-guides"
+              element={<CompanyGuides />}
             />
             <Route
               path="/interview"

@@ -162,7 +162,7 @@ const Pricing = () => {
         </div>
 
         {/* Subscription Details */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-8 mb-8 border border-blue-200 dark:border-blue-800">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-8 mb-8 border border-blue-200 dark:border-blue-800">
           <div className="grid md:grid-cols-3 gap-6 text-center">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Current Plan</h3>
@@ -210,11 +210,11 @@ const Pricing = () => {
 
         {/* Renewal Options */}
         {daysRemaining <= 7 && daysRemaining > 0 && (
-          <div className="mt-8 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-6">
+          <div className="mt-8 bg-blue-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200 mb-4">
               🔔 Subscription Expiring Soon
             </h3>
-            <p className="text-orange-700 dark:text-orange-300 mb-4">
+            <p className="text-orange-700 dark:text-blue-700 mb-4">
               Your premium subscription expires in {daysRemaining} days. Renew now to continue enjoying unlimited interviews.
             </p>
             <div className="flex gap-4">

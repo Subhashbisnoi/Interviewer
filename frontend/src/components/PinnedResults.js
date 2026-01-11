@@ -225,13 +225,13 @@ ${session.roadmap || 'No roadmap available'}
                       <div className="mb-4">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Score</span>
-                          <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                          <span className="text-lg font-bold text-blue-900 dark:text-blue-800">
                             {session.average_score.toFixed(1)}/10
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-1">
                           <div
-                            className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full"
+                            className="bg-blue-900 dark:bg-blue-800 h-2 rounded-full"
                             style={{ width: `${(session.average_score / 10) * 100}%` }}
                           ></div>
                         </div>
@@ -256,7 +256,7 @@ ${session.roadmap || 'No roadmap available'}
 
                     <button
                       onClick={() => setSelectedSession(session)}
-                      className="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
+                      className="mt-4 w-full bg-blue-900 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors text-sm font-medium"
                     >
                       View Full Results
                     </button>
@@ -274,7 +274,7 @@ ${session.roadmap || 'No roadmap available'}
             <div className="mb-6">
               <button
                 onClick={() => setSelectedSession(null)}
-                className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 transition-colors"
+                className="flex items-center space-x-2 text-blue-900 hover:text-indigo-700 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -351,7 +351,7 @@ ${session.roadmap || 'No roadmap available'}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(selectedSession.created_at)}</span>
                     {selectedSession.average_score > 0 && (
-                      <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                      <span className="text-xl font-bold text-blue-900 dark:text-blue-800">
                         Score: {selectedSession.average_score.toFixed(1)}/10
                       </span>
                     )}

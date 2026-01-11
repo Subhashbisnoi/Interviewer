@@ -24,7 +24,15 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAndConditions from './pages/TermsAndConditions';
 import CancellationAndRefund from './pages/CancellationAndRefund';
 import ShippingAndDelivery from './pages/ShippingAndDelivery';
+import Tips from './pages/Tips';
+import Insights from './pages/Insights';
+import Resources from './pages/Resources';
+import InterviewPrepGuide from './pages/guides/InterviewPrepGuide';
+import BehavioralQuestionsGuide from './pages/guides/BehavioralQuestionsGuide';
+import TechnicalPatternsGuide from './pages/guides/TechnicalPatternsGuide';
+import SystemDesignGuide from './pages/guides/SystemDesignGuide';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import AdManager from './components/AdManager';
 import './App.css';
 
 // Component to handle OAuth callbacks
@@ -91,6 +99,8 @@ const AppContent = () => {
   return (
     <div className={`min-h-screen overflow-x-hidden ${isInterviewPage ? 'bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'} flex`}>
       <OAuthHandler />
+      {/* AdManager paused - uncomment to re-enable ads */}
+      {/* <AdManager /> */}
       <SessionWarningModal />
       {!isInterviewPage && <Sidebar />}
       <div className={`flex-1 flex flex-col ${!isInterviewPage ? 'lg:ml-64' : ''}`}>
@@ -169,6 +179,34 @@ const AppContent = () => {
             <Route
               path="/shipping-policy"
               element={<ShippingAndDelivery />}
+            />
+            <Route
+              path="/tips"
+              element={<Tips />}
+            />
+            <Route
+              path="/insights"
+              element={<Insights />}
+            />
+            <Route
+              path="/resources"
+              element={<Resources />}
+            />
+            <Route
+              path="/resources/interview-prep"
+              element={<InterviewPrepGuide />}
+            />
+            <Route
+              path="/resources/behavioral-questions"
+              element={<BehavioralQuestionsGuide />}
+            />
+            <Route
+              path="/resources/technical-patterns"
+              element={<TechnicalPatternsGuide />}
+            />
+            <Route
+              path="/resources/system-design"
+              element={<SystemDesignGuide />}
             />
             <Route
               path="/interview"

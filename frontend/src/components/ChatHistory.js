@@ -284,7 +284,7 @@ const ChatHistory = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-96 bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-800"></div>
       </div>
     );
   }
@@ -328,7 +328,7 @@ const ChatHistory = () => {
               placeholder="Search by role or company..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-800 focus:border-transparent"
             />
             {searchQuery && (
               <button
@@ -345,14 +345,14 @@ const ChatHistory = () => {
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
               hasActiveFilters
-                ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300'
+                ? 'bg-blue-50 dark:bg-indigo-900/20 border-blue-800 text-indigo-700 dark:text-blue-700'
                 : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             <SlidersHorizontal className="h-5 w-5" />
             <span className="font-medium">Filters</span>
             {hasActiveFilters && (
-              <span className="ml-1 px-2 py-0.5 bg-indigo-500 text-white text-xs rounded-full">
+              <span className="ml-1 px-2 py-0.5 bg-blue-800 text-white text-xs rounded-full">
                 Active
               </span>
             )}
@@ -382,7 +382,7 @@ const ChatHistory = () => {
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-800 focus:border-transparent"
                 >
                   <option value="all">All Status</option>
                   <option value="completed">Completed</option>
@@ -398,7 +398,7 @@ const ChatHistory = () => {
                 <select
                   value={filters.scoreRange}
                   onChange={(e) => setFilters({ ...filters, scoreRange: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-800 focus:border-transparent"
                 >
                   <option value="all">All Scores</option>
                   <option value="excellent">Excellent (8-10)</option>
@@ -415,7 +415,7 @@ const ChatHistory = () => {
                 <select
                   value={filters.dateRange}
                   onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-800 focus:border-transparent"
                 >
                   <option value="all">All Time</option>
                   <option value="today">Today</option>
@@ -437,7 +437,7 @@ const ChatHistory = () => {
                     type="date"
                     value={filters.customStartDate}
                     onChange={(e) => setFilters({ ...filters, customStartDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-800 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -448,7 +448,7 @@ const ChatHistory = () => {
                     type="date"
                     value={filters.customEndDate}
                     onChange={(e) => setFilters({ ...filters, customEndDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-800 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -462,7 +462,7 @@ const ChatHistory = () => {
             Showing {filteredSessions.length} of {sessions.length} interviews
           </span>
           {hasActiveFilters && (
-            <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+            <span className="text-blue-900 dark:text-blue-800 font-medium">
               Filters applied
             </span>
           )}
@@ -476,7 +476,7 @@ const ChatHistory = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-6">Try adjusting your search or filters</p>
           <button
             onClick={clearFilters}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-900 hover:bg-indigo-700"
           >
             Clear Filters
           </button>
@@ -488,7 +488,7 @@ const ChatHistory = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-6">Start your first interview to see your history here</p>
           <button
             onClick={() => window.location.href = '/'}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-900 hover:bg-indigo-700"
           >
             Start Interview
           </button>
@@ -544,7 +544,7 @@ const ChatHistory = () => {
                       <span className="font-medium">{session.total_questions}</span> questions answered
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-1">
                         <div
-                          className="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full"
+                          className="bg-blue-900 dark:bg-blue-800 h-2 rounded-full"
                           style={{
                             width: `${((session.answered_questions || 0) / session.total_questions) * 100}%`
                           }}
@@ -557,7 +557,7 @@ const ChatHistory = () => {
                 <div className="flex flex-col gap-2 ml-4">
                   <button
                     onClick={() => handleViewDetails(session)}
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-800"
                   >
                     <TrendingUp className="h-3 w-3 mr-1" />
                     View Details
@@ -566,7 +566,7 @@ const ChatHistory = () => {
                   {session.feedback_available && (
                     <button
                       onClick={() => window.location.href = `/results?session=${session.id}`}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-blue-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-800"
                     >
                       View Report
                     </button>
@@ -698,7 +698,7 @@ const ChatHistory = () => {
                                         <div>
                                           <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center">
-                                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 text-sm font-medium mr-2">
+                                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-orange-800 dark:text-blue-800 text-sm font-medium mr-2">
                                                 F{feedbackItem.question_number}
                                               </span>
                                               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Feedback</span>
@@ -712,7 +712,7 @@ const ChatHistory = () => {
                                               </div>
                                             )}
                                           </div>
-                                          <p className="text-gray-800 dark:text-gray-200 ml-8 bg-orange-50 dark:bg-orange-900/20 p-3 rounded">{feedbackItem.content}</p>
+                                          <p className="text-gray-800 dark:text-gray-200 ml-8 bg-blue-50 dark:bg-orange-900/20 p-3 rounded">{feedbackItem.content}</p>
                                         </div>
                                       )}
                                     </div>

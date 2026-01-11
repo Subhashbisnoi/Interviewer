@@ -114,14 +114,14 @@ ${session.roadmap}
             <div className="text-purple-100">Questions</div>
           </div>
           <div className={`bg-gradient-to-r text-white rounded-lg p-6 text-center ${session.fit_percentage >= 70
-              ? 'from-emerald-500 to-emerald-600'
-              : session.fit_percentage >= 50
-                ? 'from-amber-500 to-amber-600'
-                : 'from-rose-500 to-rose-600'
+            ? 'from-emerald-500 to-emerald-600'
+            : session.fit_percentage >= 50
+              ? 'from-amber-500 to-amber-600'
+              : 'from-rose-500 to-rose-600'
             }`}>
             <div className="text-3xl font-bold mb-2">{session.fit_percentage || Math.round(session.average_score * 10)}%</div>
             <div className={`${session.fit_percentage >= 70 ? 'text-emerald-100' :
-                session.fit_percentage >= 50 ? 'text-amber-100' : 'text-rose-100'
+              session.fit_percentage >= 50 ? 'text-amber-100' : 'text-rose-100'
               }`}>
               Role Fit
             </div>
@@ -141,8 +141,8 @@ ${session.roadmap}
             <button
               onClick={() => setActiveTab('feedback')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'feedback'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
             >
               <div className="flex items-center space-x-2">
@@ -153,8 +153,8 @@ ${session.roadmap}
             <button
               onClick={() => setActiveTab('roadmap')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'roadmap'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
             >
               <div className="flex items-center space-x-2">

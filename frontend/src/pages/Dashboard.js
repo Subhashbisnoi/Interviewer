@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { DashboardSkeleton } from '../components/LoadingSkeleton';
@@ -28,16 +28,27 @@ const Dashboard = () => {
     roles: []
   });
 
+  // Prevent duplicate fetches from React StrictMode
+  const hasFetched = useRef(false);
+
   useEffect(() => {
-    if (user) {
+    if (user && !hasFetched.current) {
+      hasFetched.current = true;
       fetchDashboardData();
     }
   }, [user]);
 
   const fetchDashboardData = async () => {
+    console.time('⏱️ Dashboard Load Time');
+    const startTime = performance.now();
+
     try {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+      // Small delay to let backend cache warming complete after login
+      // This ensures cache is ready before we fetch data
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Fetch analytics and sessions in parallel
       const [analyticsResponse, sessionsResponse] = await Promise.all([
@@ -73,6 +84,10 @@ const Dashboard = () => {
       console.error('Error fetching dashboard data:', error);
       toast.error('Failed to load dashboard data');
     } finally {
+      const endTime = performance.now();
+      const totalTime = ((endTime - startTime) / 1000).toFixed(2);
+      console.timeEnd('⏱️ Dashboard Load Time');
+      console.log(`📊 Total Dashboard Load: ${totalTime} seconds`);
       setLoading(false);
     }
   };
@@ -132,53 +147,53 @@ const Dashboard = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Total Interviews */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <BarChart3 className="h-6 w-6 text-blue-900 dark:text-blue-800" />
               </div>
             </div>
-            <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">Total Interviews</h3>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalInterviews}</p>
+            <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Total Interviews</h3>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">{stats.totalInterviews}</p>
           </div>
 
           {/* Average Score */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                <Target className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <Target className="h-6 w-6 text-blue-900 dark:text-blue-800" />
               </div>
             </div>
-            <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">Average Score</h3>
+            <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Average Score</h3>
             <p className={`text-3xl font-bold ${getScoreColor(stats.averageScore)}`}>
               {stats.averageScore.toFixed(1)}/10
             </p>
           </div>
 
           {/* Best Score */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                <Award className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                <Award className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
-            <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">Best Score</h3>
-            <p className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.bestScore.toFixed(1)}/10</p>
+            <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Best Score</h3>
+            <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{stats.bestScore.toFixed(1)}/10</p>
           </div>
 
           {/* Improvement */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 ${improvement >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'} rounded-lg flex items-center justify-center`}>
+              <div className={`w-12 h-12 ${improvement >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg flex items-center justify-center`}>
                 {improvement >= 0 ? (
-                  <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 ) : (
                   <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
                 )}
               </div>
             </div>
-            <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium mb-1">Improvement</h3>
-            <p className={`text-3xl font-bold ${improvement >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <h3 className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Improvement</h3>
+            <p className={`text-3xl font-bold ${improvement >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
               {improvement >= 0 ? '+' : ''}{improvement.toFixed(1)}%
             </p>
           </div>
@@ -186,11 +201,11 @@ const Dashboard = () => {
 
         {/* Performance Chart */}
         {performanceData.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Performance Trend</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 mb-8 border border-slate-200 dark:border-slate-700">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Performance Trend</h2>
             <div className="relative" style={{ height: chartHeight + 60 }}>
               {/* Y-axis labels */}
-              <div className="absolute left-0 top-0 bottom-12 w-12 flex flex-col justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div className="absolute left-0 top-0 bottom-12 w-12 flex flex-col justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>10</span>
                 <span>7.5</span>
                 <span>5</span>
@@ -203,7 +218,7 @@ const Dashboard = () => {
                 {/* Grid lines */}
                 <div className="absolute inset-0 flex flex-col justify-between">
                   {[0, 2.5, 5, 7.5, 10].map((line) => (
-                    <div key={line} className="border-t border-gray-200 dark:border-gray-700"></div>
+                    <div key={line} className="border-t border-slate-200 dark:border-slate-700"></div>
                   ))}
                 </div>
 
@@ -215,9 +230,9 @@ const Dashboard = () => {
                       <div key={index} className="flex flex-col items-center" style={{ width: `${90 / performanceData.length}%` }}>
                         <div className="relative group">
                           {/* Tooltip */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 dark:bg-gray-700 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                          <div className="absolute bottom-full mb-2 hidden group-hover:block bg-slate-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
                             Score: {data.score.toFixed(1)}/10
-                            <div className="text-gray-400 dark:text-gray-300">{data.date}</div>
+                            <div className="text-slate-400">{data.date}</div>
                           </div>
                           {/* Bar */}
                           <div
@@ -232,7 +247,7 @@ const Dashboard = () => {
               </div>
 
               {/* X-axis labels */}
-              <div className="ml-14 mr-4 mt-2 flex justify-around text-xs text-gray-500 dark:text-gray-400">
+              <div className="ml-14 mr-4 mt-2 flex justify-around text-xs text-slate-500 dark:text-slate-400">
                 {performanceData.map((data, index) => (
                   <span key={index}>#{data.session}</span>
                 ))}
@@ -242,22 +257,22 @@ const Dashboard = () => {
         )}
 
         {/* Recent Sessions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Recent Interview Sessions</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 border border-slate-200 dark:border-slate-700">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Recent Interview Sessions</h2>
           {sessions.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400">
               <p>No interview sessions yet. Start your first interview to see analytics!</p>
             </div>
           ) : (
             <div className="space-y-4">
               {sessions.slice(0, 5).map((session, index) => (
-                <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                      <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
                         {session.role} {session.company && `at ${session.company}`}
                       </h3>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-400">
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
                           <span>{new Date(session.created_at).toLocaleDateString()}</span>
@@ -272,7 +287,7 @@ const Dashboard = () => {
                       <div className={`text-2xl font-bold ${getScoreColor(session.score || 0)}`}>
                         {(session.score || 0).toFixed(1)}/10
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Overall Score</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">Overall Score</div>
                     </div>
                   </div>
                 </div>

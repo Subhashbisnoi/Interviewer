@@ -67,7 +67,7 @@ const Leaderboard = () => {
       );
     } else if (rank === 3) {
       return (
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-800 to-orange-600 shadow-lg">
           <Award className="h-6 w-6 text-white" />
         </div>
       );
@@ -151,13 +151,13 @@ const Leaderboard = () => {
             <p className="text-green-100 text-xs mt-1">personal best</p>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white shadow-lg">
+          <div className="bg-gradient-to-br from-blue-900 to-orange-600 rounded-lg p-4 text-white shadow-lg">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-orange-100 text-sm font-medium">Total Points</span>
+              <span className="text-blue-100 text-sm font-medium">Total Points</span>
               <Zap className="h-5 w-5 text-orange-200" />
             </div>
             <p className="text-3xl font-bold">{currentUser.total_points}</p>
-            <p className="text-orange-100 text-xs mt-1">{currentUser.total_interviews} interviews</p>
+            <p className="text-blue-100 text-xs mt-1">{currentUser.total_interviews} interviews</p>
           </div>
         </div>
       )}
@@ -173,7 +173,7 @@ const Leaderboard = () => {
             <select
               value={timeframe}
               onChange={(e) => setTimeframe(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-800 focus:border-transparent"
             >
               <option value="all">All Time</option>
               <option value="week">This Week</option>
@@ -191,7 +191,7 @@ const Leaderboard = () => {
               placeholder="e.g., Frontend, Backend..."
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-800 focus:border-transparent"
             />
           </div>
         </div>
@@ -211,7 +211,7 @@ const Leaderboard = () => {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
           {/* Table Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
+          <div className="bg-gradient-to-r from-blue-800 to-purple-600 px-6 py-4">
             <h2 className="text-xl font-bold text-white">Top Performers</h2>
           </div>
 
@@ -220,7 +220,7 @@ const Leaderboard = () => {
             {leaderboard.map((entry, index) => (
               <div
                 key={index}
-                className={`px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${entry.is_current_user ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500' : ''
+                className={`px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${entry.is_current_user ? 'bg-blue-50 dark:bg-indigo-900/20 border-l-4 border-blue-800' : ''
                   }`}
               >
                 <div className="flex items-center justify-between">
@@ -232,13 +232,13 @@ const Leaderboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className={`text-lg font-semibold ${entry.is_current_user
-                            ? 'text-indigo-700 dark:text-indigo-300'
+                            ? 'text-indigo-700 dark:text-blue-700'
                             : 'text-gray-900 dark:text-white'
                           }`}>
                           {entry.display_name}
                         </h3>
                         {entry.is_current_user && (
-                          <span className="px-2 py-0.5 bg-indigo-500 text-white text-xs font-medium rounded-full">
+                          <span className="px-2 py-0.5 bg-blue-800 text-white text-xs font-medium rounded-full">
                             You
                           </span>
                         )}
@@ -277,7 +277,7 @@ const Leaderboard = () => {
                     <div className="text-right hidden md:block">
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Points</p>
                       <div className="flex items-center gap-1">
-                        <Zap className="h-4 w-4 text-orange-500" />
+                        <Zap className="h-4 w-4 text-blue-900" />
                         <span className="text-lg font-bold text-gray-900 dark:text-white">
                           {entry.total_points}
                         </span>
@@ -297,16 +297,16 @@ const Leaderboard = () => {
                   ... {currentUser.rank - leaderboard.length} more users ...
                 </p>
               </div>
-              <div className="px-6 py-4 bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500">
+              <div className="px-6 py-4 bg-blue-50 dark:bg-indigo-900/20 border-l-4 border-blue-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1">
                     {getRankBadge(currentUser.rank)}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-indigo-700 dark:text-indigo-300">
+                        <h3 className="text-lg font-semibold text-indigo-700 dark:text-blue-700">
                           You
                         </h3>
-                        <span className="px-2 py-0.5 bg-indigo-500 text-white text-xs font-medium rounded-full">
+                        <span className="px-2 py-0.5 bg-blue-800 text-white text-xs font-medium rounded-full">
                           Your Rank
                         </span>
                       </div>
@@ -340,7 +340,7 @@ const Leaderboard = () => {
                     <div className="text-right hidden md:block">
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Points</p>
                       <div className="flex items-center gap-1">
-                        <Zap className="h-4 w-4 text-orange-500" />
+                        <Zap className="h-4 w-4 text-blue-900" />
                         <span className="text-lg font-bold text-gray-900 dark:text-white">
                           {currentUser.total_points}
                         </span>

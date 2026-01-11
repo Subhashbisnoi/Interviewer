@@ -189,7 +189,7 @@ const Sidebar = () => {
       <aside className={`fixed left-0 top-0 h-screen w-64 bg-white dark:bg-slate-900 text-slate-900 dark:text-white flex flex-col shadow-xl border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out z-40 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}>
         {/* Logo */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="p-4">
           <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center space-x-3">
             <img
               src={logo}
@@ -204,8 +204,8 @@ const Sidebar = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="space-y-2">
+        <nav className="flex-1 px-3 pt-2 pb-3 overflow-y-auto">
+          <ul className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (

@@ -57,6 +57,7 @@ const SEO = ({ title, description, keywords, image, url }) => {
     return (
         <Helmet>
             <title>{fullTitle}</title>
+            <link rel="canonical" href={metaUrl} />
             <meta name="description" content={metaDescription} />
             <meta name="keywords" content={metaKeywords} />
 

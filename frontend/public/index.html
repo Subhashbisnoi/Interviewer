@@ -7,36 +7,90 @@
   <link rel="apple-touch-icon" href="%PUBLIC_URL%/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#000000" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://interviewforge.live/" />
+
   <meta name="description"
-    content="InterviewForge is the #1 AI-powered interview practice platform. Master technical, system design, and behavioral interviews with real-time AI feedback." />
-  <title>InterviewForge - Master Your Tech Interviews with AI</title>
+    content="InterviewForge is the #1 AI-powered interview practice platform. Master technical, behavioral, and system design interviews with real-time AI feedback." />
+  <title>InterviewForge | AI Interview Practice</title>
   <meta name="keywords"
-    content="InterviewForge, AI Interviewer, AI mock interview, technical interview practice, coding interview prep, system design interview, behavioral interview questions, interview feedback" />
+    content="InterviewForge, AI Interviewer, AI mock interview, technical interview practice, coding interview prep, system design interview, behavioral interview questions" />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://interviewforge.live/" />
-  <meta property="og:title" content="InterviewForge - Master Your Tech Interviews with AI" />
+  <meta property="og:title" content="InterviewForge | AI Interview Practice" />
   <meta property="og:description"
-    content="InterviewForge is the #1 AI-powered interview practice platform. Master technical, system design, and behavioral interviews with real-time AI feedback." />
-  <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
+    content="InterviewForge is the #1 AI-powered interview practice platform. Master technical, behavioral, and system design interviews with real-time AI feedback." />
+  <meta property="og:image" content="https://interviewforge.live/og-image.png" />
 
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://interviewforge.live/" />
-  <meta property="twitter:title" content="AI Interviewer - Master Your Tech Interviews" />
+  <meta property="twitter:title" content="InterviewForge | AI Interview Practice" />
   <meta property="twitter:description"
-    content="Practice technical interviews with AI-powered feedback. Get real-time analysis, roadmap for improvement, and master your next job interview." />
-  <meta property="twitter:image" content="%PUBLIC_URL%/og-image.png" />
+    content="InterviewForge is the #1 AI-powered interview practice platform. Master technical, behavioral, and system design interviews with real-time AI feedback." />
+  <meta property="twitter:image" content="https://interviewforge.live/og-image.png" />
 
-  <!-- Ads are loaded dynamically by AdManager component based on subscription status -->
+  <!-- JSON-LD Structured Data for non-JS crawlers -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "name": "InterviewForge",
+          "url": "https://interviewforge.live",
+          "alternateName": ["AI Interviewer", "Interview Forge"]
+        },
+        {
+          "@type": "Organization",
+          "name": "InterviewForge",
+          "url": "https://interviewforge.live",
+          "logo": "https://interviewforge.live/og-image.png"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "InterviewForge AI Interviewer",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "Web",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "InterviewForge is the #1 AI-powered interview practice platform. Master technical, behavioral, and system design interviews with real-time AI feedback.",
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "15000"
+          }
+        }
+      ]
+    }
+  </script>
 
   <!-- Ahrefs Analytics -->
   <script src="https://analytics.ahrefs.com/analytics.js" data-key="lD9RaOAEa59w4/C87vPrqQ" async></script>
 </head>
 
 <body>
-  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <!-- Static content for LLM crawlers and non-JS environments -->
+  <noscript>
+    <h1>InterviewForge - AI-Powered Interview Practice</h1>
+    <p>InterviewForge is the #1 AI-powered interview practice platform. Master technical, behavioral, and system design
+      interviews with real-time AI feedback. Get personalized roadmaps, detailed analysis, and unlimited mock interviews
+      to land your dream job at top tech companies like Google, Amazon, and Microsoft.</p>
+    <h2>Features</h2>
+    <ul>
+      <li>AI-Powered Personalization: Questions tailored to your resume and target role</li>
+      <li>Real-Time Feedback: Instant analysis with specific improvement suggestions</li>
+      <li>Multiple Interview Types: Technical, behavioral, and system design interviews</li>
+      <li>Progress Tracking: Monitor improvement with detailed analytics</li>
+    </ul>
+    <p>Visit <a href="https://interviewforge.live">interviewforge.live</a> to start practicing.</p>
+  </noscript>
   <div id="root"></div>
   <!-- Razorpay Checkout Script -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>

@@ -75,9 +75,9 @@ const Header = () => {
                 alt="InterviewForge Logo"
                 className="h-9 w-9 object-contain"
               />
-              <h1 className="hidden sm:block text-xl font-bold text-slate-900 dark:text-white">
+              <span className="hidden sm:block text-xl font-bold text-slate-900 dark:text-white">
                 InterviewForge
-              </h1>
+              </span>
             </Link>
 
             {/* Main Navigation - Product focused */}

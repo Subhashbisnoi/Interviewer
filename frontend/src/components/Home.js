@@ -315,19 +315,18 @@ const Home = ({ onStartInterview }) => {
             {/* Yellow badge */}
             <div className="inline-flex items-center px-4 py-2 bg-amber-100 border border-amber-200 rounded-full text-amber-700 text-sm font-medium mb-8">
               <Sparkles className="w-4 h-4 mr-2 text-amber-500" />
-              AI-Powered Interview Preparation Platform
+              The #1 AI-Powered Interview Preparation Platform
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 dark:text-white mb-6 leading-tight">
               Ace Your Next Interview with{' '}
               <span className="text-slate-900 dark:text-white">
-                AI-Powered Practice
+                InterviewForge
               </span>
             </h1>
 
             <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mb-10 leading-relaxed">
-              The intelligent platform for interview preparation. Personalized questions,
-              real-time feedback, and detailed analytics — all in one system.
+              InterviewForge.live is the premier AI interviewer designed to help you master technical, behavioral, and system design interviews. Practice with our intelligent AI, get instant feedback, and land your dream job at top tech companies.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">

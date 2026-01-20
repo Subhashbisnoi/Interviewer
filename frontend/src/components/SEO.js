@@ -14,45 +14,45 @@ const SEO = ({ title, description, keywords, image, url }) => {
     const metaImage = image || defaultImage;
     const metaUrl = url ? `${siteUrl}${url}` : siteUrl;
 
-    const jsonLd = [
-        {
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            "name": "InterviewForge",
-            "url": siteUrl,
-            "alternateName": ["AI Interviewer", "Interview Forge"]
-        },
-        {
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            "name": "InterviewForge",
-            "url": siteUrl,
-            "logo": defaultImage,
-            "sameAs": [
-                "https://twitter.com/interviewforge",
-                "https://www.linkedin.com/company/interviewforge",
-                "https://github.com/interviewforge"
-            ]
-        },
-        {
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "InterviewForge AI Interviewer",
-            "applicationCategory": "EducationalApplication",
-            "operatingSystem": "Web",
-            "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "USD"
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "name": "InterviewForge",
+                "url": siteUrl,
+                "alternateName": ["AI Interviewer", "Interview Forge"]
             },
-            "description": defaultDescription,
-            "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "4.8",
-                "ratingCount": "15000"
+            {
+                "@type": "Organization",
+                "name": "InterviewForge",
+                "url": siteUrl,
+                "logo": defaultImage,
+                "sameAs": [
+                    "https://twitter.com/interviewforge",
+                    "https://www.linkedin.com/company/interviewforge",
+                    "https://github.com/interviewforge"
+                ]
+            },
+            {
+                "@type": "SoftwareApplication",
+                "name": "InterviewForge AI Interviewer",
+                "applicationCategory": "EducationalApplication",
+                "operatingSystem": "Web",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "description": defaultDescription,
+                "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": "4.8",
+                    "ratingCount": "15000"
+                }
             }
-        }
-    ];
+        ]
+    };
 
     return (
         <Helmet>

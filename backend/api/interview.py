@@ -116,6 +116,13 @@ async def start_interview(
         company = interview_data.get("company")
         resume_text = interview_data.get("resume_text", "")
         interview_mode = interview_data.get("interview_mode", "short")  # NEW: Get interview mode
+        job_description = interview_data.get("job_description")  # NEW: Get optional JD
+        
+        # If JD not provided, generate it
+        if not job_description or job_description.strip() == "":
+            from common import generate_job_description
+            job_description = generate_job_description(role, company)
+            print("Generated job description:", job_description)
         
         # Validate interview mode
         if interview_mode not in ["short", "detailed"]:
@@ -131,6 +138,7 @@ async def start_interview(
             "role": role,
             "company": company,
             "resume_text": resume_text,
+            "job_description": job_description,  # Store JD in state
             "question": [],
             "answer": [],
             "feedback": [],
@@ -146,7 +154,8 @@ async def start_interview(
                 company=company,
                 resume_text=resume_text,
                 round_number=1,
-                difficulty=DifficultyLevel.MEDIUM
+                difficulty=DifficultyLevel.MEDIUM,
+                job_description=job_description  # Pass JD to question generation
             )
         else:
             # Short mode: use existing question generator
@@ -175,6 +184,8 @@ async def start_interview(
             thread_id=session_id,
             role=role,
             company=company,
+            resume_text=resume_text,  # Add resume text to database
+            job_description=job_description,  # Store JD in database
             status="in_progress",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -201,7 +212,8 @@ async def start_interview(
             "interview_mode": interview_mode,
             "current_round": 1,
             "round_results": [],
-            "current_difficulty": "medium"
+            "current_difficulty": "medium",
+            "job_description": job_description  # Store JD in memory for this session
         }
         
         # Prepare response based on interview mode
@@ -432,6 +444,7 @@ async def submit_round_answers(
         # Evaluate each answer
         scores: list[QuestionScore] = []
         round_type = ROUND_CONFIG[round_number]["type"]
+        job_description = session.job_description  # Get JD from database
         
         for i, (question, answer) in enumerate(zip(questions, answers)):
             score = detailed_interview_manager.evaluate_answer(
@@ -439,7 +452,8 @@ async def submit_round_answers(
                 answer=answer,
                 role=session.role,
                 company=session.company,
-                round_type=round_type
+                round_type=round_type,
+                job_description=job_description  # Pass JD to evaluation
             )
             scores.append(score)
             
@@ -503,6 +517,7 @@ async def submit_round_answers(
                 resume_text=session.resume_text or "",
                 round_number=next_round,
                 difficulty=DifficultyLevel(current_difficulty),
+                job_description=job_description,  # Pass JD for next round
                 previous_qa=[{"question": q, "answer": a} for q, a in zip(questions, answers)]
             )
             session_memory["questions"] = next_questions

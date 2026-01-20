@@ -18,13 +18,15 @@ const Home = ({ onStartInterview }) => {
   const [resumeFile, setResumeFile] = useState(null);
   const [formData, setFormData] = useState({
     role: '',
-    company: ''
+    company: '',
+    jobDescription: ''  // Add JD field
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState(null);
   const [interviewMode, setInterviewMode] = useState('short');
+  const [showJDInput, setShowJDInput] = useState(false);  // Toggle for JD textarea
   const interviewFormRef = useRef(null);
 
   const scrollToForm = () => {
@@ -76,7 +78,8 @@ const Home = ({ onStartInterview }) => {
       role: formData.role.trim(),
       company: formData.company.trim(),
       resumeFile,
-      interviewMode
+      interviewMode,
+      jobDescription: formData.jobDescription.trim()  // Add JD to interview data
     };
 
     if (!user) {
@@ -144,7 +147,8 @@ const Home = ({ onStartInterview }) => {
             role: data.role,
             company: data.company,
             resume_text: resume_text,
-            interview_mode: data.interviewMode || 'short'
+            interview_mode: data.interviewMode || 'short',
+            job_description: data.jobDescription || null  // Include JD in API request
           })
         }
       );
@@ -532,6 +536,41 @@ const Home = ({ onStartInterview }) => {
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-800 focus:border-blue-800 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="e.g., Google, Microsoft, Amazon"
                 />
+              </div>
+
+              {/* Job Description (Optional) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Job Description (Optional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowJDInput(!showJDInput)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                  >
+                    {showJDInput ? 'Hide' : 'Add JD'}
+                    <ArrowRight className={`w-3 h-3 transition-transform ${showJDInput ? 'rotate-90' : ''}`} />
+                  </button>
+                </div>
+
+                {showJDInput && (
+                  <div className="space-y-2">
+                    <textarea
+                      name="jobDescription"
+                      id="jobDescription"
+                      value={formData.jobDescription}
+                      onChange={handleInputChange}
+                      rows={6}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-800 focus:border-blue-800 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      placeholder="Paste the job description here. If left empty, we'll generate one based on the role and company."
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <Brain className="w-3 h-3" />
+                      Providing a JD helps generate more relevant questions tailored to the actual job requirements
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Interview Mode Selector */}

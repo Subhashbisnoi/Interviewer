@@ -89,3 +89,53 @@ def extract_resume_text(pdf_bytes: bytes) -> str:
     
     print("All text extraction methods failed")
     return ""
+
+def generate_job_description(role: str, company: str) -> str:
+    """
+    Generate a job description using LLM based on role and company.
+    
+    Args:
+        role: Job role/title
+        company: Company name
+        
+    Returns:
+        str: Generated job description
+    """
+    messages = [
+        SystemMessage(content="""You are an expert recruiter creating job descriptions.
+Generate a comprehensive, realistic job description that includes:
+1. Role overview and responsibilities
+2. Required qualifications and skills
+3. Preferred qualifications
+4. Key competencies needed for success
+
+Make it specific to the role and company culture when possible."""),
+        HumanMessage(content=f"""Generate a job description for:
+
+Role: {role}
+Company: {company}
+
+Create a detailed, professional JD that would be used for actual hiring.""")
+    ]
+    
+    try:
+        response = generator_llm.invoke(messages)
+        jd = response.content if hasattr(response, 'content') else str(response)
+        return jd.strip()
+    except Exception as e:
+        print(f"Error generating JD: {e}")
+        # Fallback simple JD
+        return f"""Job Title: {role}
+Company: {company}
+
+We are seeking a talented {role} to join our team. The ideal candidate will have relevant experience and skills for this position.
+
+Responsibilities:
+- Perform duties related to {role}
+- Collaborate with team members
+- Contribute to company goals
+
+Requirements:
+- Experience in {role} or related field
+- Strong communication skills
+- Problem-solving abilities"""

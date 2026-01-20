@@ -21,6 +21,12 @@ const Interview = ({ interviewData, onSessionCreated }) => {
   const [currentRound, setCurrentRound] = useState(interviewData.current_round || 1);
   const [roundName, setRoundName] = useState(interviewData.round_name || 'Screening');
 
+  // Anti-cheating: Tab switching detection
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [isTabVisible, setIsTabVisible] = useState(true);
+  const tabSwitchTimestamps = useRef([]);
+  const sessionId = interviewData.session_id;
+
   const handleAnswerChange = (value) => {
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = value;
@@ -136,8 +142,150 @@ const Interview = ({ interviewData, onSessionCreated }) => {
     }
   };
 
+  // Anti-cheat ing: Log suspicious activity to backend
+  const logSuspiciousActivity = async (activityData) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/proctoring/log`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ ...activityData, sessionId })
+      });
+    } catch (error) {
+      console.error('Failed to log proctoring event:', error);
+    }
+  };
+
+  // Anti-cheating: Copy-paste prevention
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      toast.warning("Right-click is disabled during the interview");
+      return false;
+    };
+
+    const handleKeyDown = (e) => {
+      // Prevent Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A
+      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        toast.warning("Copy-paste is disabled during the interview");
+        logSuspiciousActivity({
+          type: 'COPY_PASTE_ATTEMPT',
+          key: e.key,
+          timestamp: new Date().toISOString()
+        });
+        return false;
+      }
+
+      // Prevent F12 (devtools), Ctrl+U (view source)
+      if (e.keyCode === 123 || (e.ctrlKey && e.keyCode === 85)) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const handleCopy = (e) => { e.preventDefault(); };
+    const handleCut = (e) => { e.preventDefault(); };
+    const handlePaste = (e) => { e.preventDefault(); };
+
+    // Apply user-select: none to prevent text selection
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('cut', handleCut);
+    document.addEventListener('paste', handlePaste);
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('cut', handleCut);
+      document.removeEventListener('paste', handlePaste);
+      document.body.style.userSelect = 'auto';
+      document.body.style.webkitUserSelect = 'auto';
+    };
+  }, [toast]);
+
+  // Anti-cheating: Tab switching detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      setIsTabVisible(isVisible);
+
+      if (!isVisible) {
+        // User switched away from tab
+        const timestamp = new Date().toISOString();
+        const newCount = tabSwitchCount + 1;
+
+        setTabSwitchCount(newCount);
+        tabSwitchTimestamps.current.push({
+          timestamp,
+          action: 'tab_left',
+          visibilityState: document.visibilityState
+        });
+
+        // Log to backend
+        logSuspiciousActivity({
+          type: 'TAB_SWITCH',
+          count: newCount,
+          timestamp
+        });
+
+        // Show progressive warnings
+        if (newCount >= 5) {
+          toast.error("⚠️ CRITICAL: Excessive tab switching detected. Interview terminated.");
+
+          // Auto-terminate the interview
+          setTimeout(() => {
+            alert("Interview has been terminated due to excessive tab switching. This incident has been logged.");
+            navigate('/');
+          }, 2000);
+        } else if (newCount >= 3) {
+          toast.error(`⚠️ Warning: Multiple tab switches detected (${newCount}/5). Stay on this page.`);
+        } else {
+          toast.warning(`Tab switch detected (${newCount}/5). Please stay focused on the interview.`);
+        }
+      } else {
+        // User returned to tab
+        tabSwitchTimestamps.current.push({
+          timestamp: new Date().toISOString(),
+          action: 'tab_returned'
+        });
+      }
+    };
+
+    const handleBlur = () => {
+      // Window lost focus
+      logSuspiciousActivity({
+        type: 'WINDOW_BLUR',
+        timestamp: new Date().toISOString()
+      });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [tabSwitchCount, toast]);
+
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col fixed inset-0 z-50">
+    <div className="min-h-screen bg-gray-900 flex flex-col fixed inset-0 z-50" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+      {/* Tab Visibility Warning Banner */}
+      {!isTabVisible && (
+        <div className="fixed top-0 left-0 right-0 bg-red-600 text-white py-3 px-4 z-50 text-center font-semibold shadow-lg animate-pulse">
+          ⚠️ Please return to the interview tab. Your activity is being monitored.
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="bg-gray-800 px-6 py-3 flex items-center justify-between border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center space-x-4">
@@ -168,6 +316,12 @@ const Interview = ({ interviewData, onSessionCreated }) => {
             <div className="text-sm text-gray-400 flex items-center space-x-2">
               <Clock className="h-4 w-4" />
               <span>Question {currentQuestion + 1} of {questions.length}</span>
+            </div>
+            {/* Tab Switch Counter */}
+            <div className="text-xs text-gray-400 flex items-center space-x-2 border border-gray-600 px-2 py-1 rounded">
+              <span className={tabSwitchCount >= 3 ? 'text-red-400 font-semibold' : ''}>
+                Tab switches: {tabSwitchCount}/5
+              </span>
             </div>
             <button
               onClick={() => {

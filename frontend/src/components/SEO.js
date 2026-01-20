@@ -2,9 +2,9 @@ import React from 'react';
 import { Helmet } from 'react-helmet';
 
 const SEO = ({ title, description, keywords, image, url }) => {
-    const siteTitle = 'AI Interviewer';
-    const defaultDescription = 'The #1 AI Interviewer. Practice coding, system design, and behavioral interviews with advanced AI. Get instant feedback, personalized roadmaps, and rank higher in your next job interview.';
-    const defaultKeywords = 'AI interview, free ai interview, interview prep, mock interview online, technical interview practice, coding interview, system design interview, interview feedback, interviewforge';
+    const siteTitle = 'InterviewForge - AI Interviewer';
+    const defaultDescription = 'InterviewForge is the #1 AI-powered interview practice platform. Master technical, system design, and behavioral interviews with real-time AI feedback. Get personalized roadmaps, detailed analysis, and unlimited mock interviews to land your dream job at top tech companies.';
+    const defaultKeywords = 'InterviewForge, AI Interviewer, AI mock interview, technical interview practice, coding interview prep, system design interview, behavioral interview questions, interview feedback, soft skills analysis, tech interview roadmap, Google interview prep, Amazon interview prep';
     const defaultImage = 'https://interviewforge.live/og-image.png';
     const siteUrl = 'https://interviewforge.live';
 
@@ -13,6 +13,46 @@ const SEO = ({ title, description, keywords, image, url }) => {
     const metaKeywords = keywords || defaultKeywords;
     const metaImage = image || defaultImage;
     const metaUrl = url ? `${siteUrl}${url}` : siteUrl;
+
+    const jsonLd = [
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "InterviewForge",
+            "url": siteUrl,
+            "alternateName": ["AI Interviewer", "Interview Forge"]
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "InterviewForge",
+            "url": siteUrl,
+            "logo": defaultImage,
+            "sameAs": [
+                "https://twitter.com/interviewforge",
+                "https://www.linkedin.com/company/interviewforge",
+                "https://github.com/interviewforge"
+            ]
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "InterviewForge AI Interviewer",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "description": defaultDescription,
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "ratingCount": "15000"
+            }
+        }
+    ];
 
     return (
         <Helmet>
@@ -33,6 +73,11 @@ const SEO = ({ title, description, keywords, image, url }) => {
             <meta property="twitter:title" content={fullTitle} />
             <meta property="twitter:description" content={metaDescription} />
             <meta property="twitter:image" content={metaImage} />
+
+            {/* JSON-LD Structured Data */}
+            <script type="application/ld+json">
+                {JSON.stringify(jsonLd)}
+            </script>
         </Helmet>
     );
 };

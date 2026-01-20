@@ -77,6 +77,7 @@ class InterviewSession(Base):
     role = Column(String)
     company = Column(String)
     resume_text = Column(Text)  # Store resume text directly
+    job_description = Column(Text, nullable=True)  # Job description (user-provided or auto-generated)
     status = Column(String, default="active")  # active, completed, archived, terminated
     total_score = Column(Float, default=0.0)
     average_score = Column(Float, default=0.0)
@@ -189,6 +190,7 @@ class InterviewState(TypedDict):
     role: str
     company: str
     resume_text: str
+    job_description: Optional[str]  # Job description for the role
     
     # Company research data
     company_research: Optional[Dict[str, Any]]
@@ -226,6 +228,7 @@ class InterviewStartRequest(BaseModel):
     company: str = Field(..., min_length=1, description="Company name")
     resume_text: str = Field(..., min_length=10, description="Resume text content")
     interview_mode: str = Field(default="short", description="Interview mode: short or detailed")
+    job_description: Optional[str] = Field(default=None, description="Optional job description")
 
 
 class AnswerSubmissionRequest(BaseModel):

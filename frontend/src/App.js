@@ -34,6 +34,9 @@ import SystemDesignGuide from './pages/guides/SystemDesignGuide';
 import CompanyGuides from './pages/guides/CompanyGuides';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdManager from './components/AdManager';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminInterviewDetails from './pages/AdminInterviewDetails';
 import './App.css';
 
 // Component to handle OAuth callbacks
@@ -96,6 +99,8 @@ const AppContent = () => {
 
   // Check if current route is interview to skip container padding and sidebar
   const isInterviewPage = location.pathname === '/interview';
+  const isAdminPage = location.pathname.startsWith('/admin');
+  const isStandalonePage = isInterviewPage || isAdminPage;
 
   return (
     <div className={`min-h-screen overflow-x-hidden ${isInterviewPage ? 'bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'} flex`}>
@@ -103,10 +108,10 @@ const AppContent = () => {
       {/* AdManager paused - uncomment to re-enable ads */}
       {/* <AdManager /> */}
       <SessionWarningModal />
-      {!isInterviewPage && <Sidebar />}
-      <div className={`flex-1 flex flex-col ${!isInterviewPage ? 'lg:ml-64 pt-16' : ''}`}>
-        {!isInterviewPage && <Header />}
-        <main className={isInterviewPage ? 'flex-1' : 'flex-1 w-full px-4 py-8 lg:container lg:mx-auto'}>
+      {!isStandalonePage && <Sidebar />}
+      <div className={`flex-1 flex flex-col ${!isStandalonePage ? 'lg:ml-64 pt-16' : ''}`}>
+        {!isStandalonePage && <Header />}
+        <main className={isInterviewPage ? 'flex-1' : (isAdminPage ? 'w-full' : 'flex-1 w-full px-4 py-8 lg:container lg:mx-auto')}>
           <Routes>
             {/* Main Pages */}
             <Route
@@ -241,9 +246,17 @@ const AppContent = () => {
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/interviews/:id" element={<AdminInterviewDetails />} />
+            {/* Redirect /admin to /admin/login */}
+            <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
           </Routes>
         </main>
-        {!isInterviewPage && <Footer />}
+
+        {!isStandalonePage && <Footer />}
       </div>
     </div>
   );

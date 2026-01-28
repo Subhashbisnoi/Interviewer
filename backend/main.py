@@ -27,6 +27,7 @@ from api.tts import router as tts_router
 from api.voice import router as voice_router
 from api.auth import router as auth_router
 from api.payment import router as payment_router
+from api.admin import router as admin_router
 
 app = FastAPI(
     title="AI Interviewer API",
@@ -87,6 +88,7 @@ app.include_router(interview_router)
 app.include_router(interview_v2_router)
 app.include_router(tts_router)
 app.include_router(voice_router)
+app.include_router(admin_router)
 
 # Basic routes
 @app.get("/")

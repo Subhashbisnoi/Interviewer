@@ -11,5 +11,10 @@ if [[ $(basename $(pwd)) != "backend" ]]; then
     echo "📁 Changed to backend directory: $(pwd)"
 fi
 
+# Run database migrations
+echo "🗄️ Running database migrations..."
+alembic upgrade head
+echo "✅ Migrations complete"
+
 # Start the FastAPI server
 exec python main.py

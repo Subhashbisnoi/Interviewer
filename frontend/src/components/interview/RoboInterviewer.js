@@ -210,8 +210,8 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
   }, [questionText]);
 
   return (
-    <div className="robo-interviewer-container">
-      <div className="video-grid">
+    <div className="robo-interviewer-container" style={{ flex: 1 }}>
+      <div className="video-grid" style={{ height: '100%' }}>
         {/* AI Interviewer */}
         <div className={`participant-box interviewer ${connectionQuality}`}>
           <canvas
@@ -220,9 +220,11 @@ const RoboInterviewer = forwardRef(({ questionText, onRequestNextQuestion, isInt
             height={300}
             className="participant-video ai-interviewer-canvas"
             style={{
+              position: 'absolute',
+              inset: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'contain',
+              objectFit: 'cover',
               backgroundColor: '#0f172a'
             }}
           />

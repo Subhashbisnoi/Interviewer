@@ -105,19 +105,33 @@ def create_user(db: Session, user_data: UserCreate) -> User:
             detail="Email already registered"
         )
     
-    # Create new user
+    # Create new user with 20 free credits
     hashed_password = get_password_hash(user_data.password)
     db_user = User(
         email=user_data.email,
         full_name=user_data.full_name,
         hashed_password=hashed_password,
-        is_active=True
+        is_active=True,
+        credits=20,
     )
-    
+
     try:
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+
+        # Record the signup bonus credit transaction
+        from models import CreditTransaction
+        txn = CreditTransaction(
+            user_id=db_user.id,
+            amount=20,
+            balance_after=20,
+            transaction_type="signup_bonus",
+            description="Welcome gift – 20 free credits",
+        )
+        db.add(txn)
+        db.commit()
+
         return db_user
     except Exception as e:
         db.rollback()
@@ -474,26 +488,37 @@ async def google_auth(
                 email=email,
                 full_name=full_name,
                 hashed_password=hashed_password,
-                is_active=True
+                is_active=True,
+                credits=20,
             )
-            
+
             try:
                 db.add(user)
                 db.commit()
                 db.refresh(user)
+                from models import CreditTransaction
+                txn = CreditTransaction(
+                    user_id=user.id,
+                    amount=20,
+                    balance_after=20,
+                    transaction_type="signup_bonus",
+                    description="Welcome gift – 20 free credits",
+                )
+                db.add(txn)
+                db.commit()
             except Exception as e:
                 db.rollback()
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to create user"
                 )
-        
+
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Inactive user account"
             )
-        
+
         # Create access token
         t7 = time.time()
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

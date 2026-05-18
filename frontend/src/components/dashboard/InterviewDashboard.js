@@ -9,17 +9,26 @@ import {
   formatScore 
 } from '../../services/interview';
 
+// Read cache synchronously so initial state is already populated
+function readCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { data } = JSON.parse(raw);
+    return data || null;
+  } catch { return null; }
+}
+
 const InterviewDashboard = () => {
   const { user } = useAuth();
-  const [sessions, setSessions] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
+  const [sessions, setSessions] = useState(() => readCache('cache_sessions') || []);
+  const [analytics, setAnalytics] = useState(() => readCache('cache_analytics'));
   const [selectedSession, setSelectedSession] = useState(null);
   const [chatHistory, setChatHistory] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!readCache('cache_sessions'));
   const [error, setError] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Load user sessions and analytics on component mount
   useEffect(() => {
     if (user) {
       loadUserSessions();
@@ -28,11 +37,10 @@ const InterviewDashboard = () => {
   }, [user]);
 
   const loadUserSessions = async () => {
-    setIsLoading(true);
+    if (!readCache('cache_sessions')) setIsLoading(true);
     try {
-      const result = await getUserInterviewSessions();
-      console.log('Sessions result:', result); // Debug log
-      setSessions(result || []); // result is already the sessions array
+      const result = await getUserInterviewSessions((fresh) => setSessions(fresh || []));
+      setSessions(result || []);
     } catch (err) {
       setError(err.message || 'Failed to load sessions');
     } finally {
@@ -42,9 +50,8 @@ const InterviewDashboard = () => {
 
   const loadUserAnalytics = async () => {
     try {
-      const result = await getUserAnalytics();
-      console.log('Analytics result:', result); // Debug log
-      setAnalytics(result); // Store the result directly, not result.analytics
+      const result = await getUserAnalytics((fresh) => setAnalytics(fresh));
+      setAnalytics(result);
     } catch (err) {
       console.error('Failed to load analytics:', err);
     }

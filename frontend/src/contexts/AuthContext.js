@@ -5,9 +5,21 @@ import { apiClient } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
+const getCachedUser = () => {
+  try {
+    const token = localStorage.getItem('token');
+    const loginTime = localStorage.getItem('loginTime');
+    const raw = localStorage.getItem('cached_user');
+    if (!token || !loginTime || !raw) return null;
+    const elapsed = Date.now() - parseInt(loginTime);
+    if (elapsed >= 1440 * 60 * 1000) return null; // token expired
+    return JSON.parse(raw);
+  } catch { return null; }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(getCachedUser);   // sync — no flash
+  const [loading, setLoading] = useState(!getCachedUser()); // skip spinner if already have user
   const [sessionWarning, setSessionWarning] = useState(false);
   const navigate = useNavigate();
 
@@ -41,6 +53,7 @@ export const AuthProvider = ({ children }) => {
           // Try to get current user (but don't block the app)
           try {
             const userData = await getCurrentUser();
+            localStorage.setItem('cached_user', JSON.stringify(userData));
             setUser(userData);
             setupSessionWarning(timeElapsed);
           } catch (error) {
@@ -86,6 +99,7 @@ export const AuthProvider = ({ children }) => {
   const handleSessionExpired = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('loginTime');
+    localStorage.removeItem('cached_user');
     setUser(null);
     setSessionWarning(false);
     
@@ -117,6 +131,7 @@ export const AuthProvider = ({ children }) => {
       const { user: userData, token } = await loginApi(email, password);
       localStorage.setItem('token', token);
       localStorage.setItem('loginTime', Date.now().toString());
+      localStorage.setItem('cached_user', JSON.stringify(userData));
       setUser(userData);
       setupSessionWarning(0);
       // Don't navigate automatically - let components handle it
@@ -135,6 +150,7 @@ export const AuthProvider = ({ children }) => {
       if (response.access_token && response.user) {
         localStorage.setItem('token', response.access_token);
         localStorage.setItem('loginTime', Date.now().toString());
+        localStorage.setItem('cached_user', JSON.stringify(response.user));
         setUser(response.user);
         setupSessionWarning(0);
         // Don't navigate automatically - let components handle it
@@ -153,6 +169,7 @@ export const AuthProvider = ({ children }) => {
       const { user: userData, token } = await googleAuthApi(credential);
       localStorage.setItem('token', token);
       localStorage.setItem('loginTime', Date.now().toString());
+      localStorage.setItem('cached_user', JSON.stringify(userData));
       setUser(userData);
       setupSessionWarning(0);
       // Don't navigate automatically - let components handle it
@@ -168,6 +185,7 @@ export const AuthProvider = ({ children }) => {
       const { user: userData, token } = await githubAuthApi(code);
       localStorage.setItem('token', token);
       localStorage.setItem('loginTime', Date.now().toString());
+      localStorage.setItem('cached_user', JSON.stringify(userData));
       setUser(userData);
       setupSessionWarning(0);
       // Don't navigate automatically - let components handle it
@@ -178,9 +196,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const userData = await getCurrentUser();
+      if (userData) {
+        localStorage.setItem('cached_user', JSON.stringify(userData));
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('loginTime');
+    localStorage.removeItem('cached_user');
     setUser(null);
     setSessionWarning(false);
     
@@ -203,6 +234,7 @@ export const AuthProvider = ({ children }) => {
       logout,
       sessionWarning,
       extendSession,
+      refreshUser,
       dismissWarning: () => setSessionWarning(false)
     }}>
       {children}

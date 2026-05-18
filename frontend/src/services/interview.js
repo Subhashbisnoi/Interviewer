@@ -4,6 +4,29 @@
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+// ── Cache helpers ────────────────────────────────────────────────────────────
+const CACHE_TTL = 30 * 60 * 1000; // 30 min — stale threshold
+
+function cacheGet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return { data: null, stale: true };
+    const { data, ts } = JSON.parse(raw);
+    return { data, stale: Date.now() - ts > CACHE_TTL };
+  } catch {
+    return { data: null, stale: true };
+  }
+}
+
+function cacheSet(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch {}
+}
+
+export function invalidateDashboardCache() {
+  localStorage.removeItem('cache_sessions');
+  localStorage.removeItem('cache_analytics');
+}
+
 // Get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -16,23 +39,22 @@ const getAuthHeaders = () => {
 /**
  * Get all interview sessions for the current user
  */
-export const getUserInterviewSessions = async () => {
-  try {
-    const response = await fetch(`${API_URL}/interview/sessions`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
+const _fetchSessions = async () => {
+  const response = await fetch(`${API_URL}/interview/sessions`, { method: 'GET', headers: getAuthHeaders() });
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+  const data = await response.json();
+  const sessions = data.sessions || [];
+  cacheSet('cache_sessions', sessions);
+  return sessions;
+};
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.sessions || [];
-  } catch (error) {
-    console.error('Error fetching user sessions:', error);
-    throw error;
+export const getUserInterviewSessions = async (onUpdate) => {
+  const { data, stale } = cacheGet('cache_sessions');
+  if (data) {
+    if (stale) _fetchSessions().then(fresh => onUpdate && onUpdate(fresh)).catch(() => {});
+    return data;
   }
+  return _fetchSessions();
 };
 
 /**
@@ -68,23 +90,21 @@ export const getChatHistory = async (sessionId) => {
 /**
  * Get user analytics
  */
-export const getUserAnalytics = async () => {
-  try {
-    const response = await fetch(`${API_URL}/interview/analytics`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
+const _fetchAnalytics = async () => {
+  const response = await fetch(`${API_URL}/interview/analytics`, { method: 'GET', headers: getAuthHeaders() });
+  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+  const data = await response.json();
+  cacheSet('cache_analytics', data);
+  return data;
+};
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
+export const getUserAnalytics = async (onUpdate) => {
+  const { data, stale } = cacheGet('cache_analytics');
+  if (data) {
+    if (stale) _fetchAnalytics().then(fresh => onUpdate && onUpdate(fresh)).catch(() => {});
     return data;
-  } catch (error) {
-    console.error('Error fetching analytics:', error);
-    throw error;
   }
+  return _fetchAnalytics();
 };
 
 /**

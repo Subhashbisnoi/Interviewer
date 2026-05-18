@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import RoboInterviewer from './RoboInterviewer';
 import VoiceRecorder from '../VoiceRecorder';
-import { 
-  startInterviewSession, 
-  submitAnswer, 
-  getChatHistory, 
+import {
+  startInterviewSession,
+  submitAnswer,
+  getChatHistory,
   getSessionStatus,
   uploadResume,
   formatChatHistory,
@@ -13,6 +13,7 @@ import {
   getStatusColor,
   formatScore
 } from '../../services/interviewV2';
+import { invalidateDashboardCache } from '../../services/interview';
 
 const InterviewV2 = () => {
   const { user } = useAuth();
@@ -163,6 +164,7 @@ const InterviewV2 = () => {
     try {
       const status = await getSessionStatus(threadId);
       setSessionStatus(status);
+      if (status?.status === 'completed') invalidateDashboardCache();
     } catch (err) {
       console.error('Failed to load session status:', err);
     }

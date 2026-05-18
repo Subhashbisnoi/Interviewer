@@ -1,609 +1,413 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle, Volume2, PhoneOff, Mic, MicOff, Video, VideoOff, Send } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import RoboInterviewer from './interview/RoboInterviewer';
-import VoiceRecorder from './VoiceRecorder';
+import { invalidateDashboardCache } from '../services/interview';
 
-const Interview = ({ interviewData, onSessionCreated }) => {
-  const navigate = useNavigate();
-  const toast = useToast();
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [questions, setQuestions] = useState(interviewData.questions || []);
-  const [answers, setAnswers] = useState(Array(interviewData.questions?.length || 0).fill(''));
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [transcribedAnswer, setTranscribedAnswer] = useState('');
-  const videoMeetingRef = useRef(null);
-  const roboInterviewerRef = useRef(null);
+const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-  // Track current round for detailed mode
-  const [currentRound, setCurrentRound] = useState(interviewData.current_round || 1);
-  const [roundName, setRoundName] = useState(interviewData.round_name || 'Screening');
+const PLAN_META = {
+  normal:  { label: 'Normal',  gradient: 'from-blue-500 to-cyan-500',   glow: 'rgba(59,130,246,0.35)' },
+  thunder: { label: 'Thunder ⚡', gradient: 'from-violet-500 to-purple-600', glow: 'rgba(139,92,246,0.35)' },
+  max:     { label: 'Max 🏆',  gradient: 'from-amber-400 to-orange-500', glow: 'rgba(251,191,36,0.35)' },
+};
 
-  // Anti-cheating: Tab switching detection
-  const [tabSwitchCount, setTabSwitchCount] = useState(0);
-  const [isTabVisible, setIsTabVisible] = useState(true);
-  const tabSwitchTimestamps = useRef([]);
-  const sessionId = interviewData.session_id;
-
-  const handleAnswerChange = (value) => {
-    const newAnswers = [...answers];
-    newAnswers[currentQuestion] = value;
-    setAnswers(newAnswers);
-    setTranscribedAnswer(value);
-  };
-
-  const handleVoiceRecordingComplete = (transcribedText) => {
-    handleAnswerChange(transcribedText);
-  };
-
-  const handleRecordingError = (error) => {
-    setError(error);
-  };
-
-  const submitInterview = async () => {
-    if (answers.some(answer => !answer?.trim())) {
-      setError('Please answer all questions before submitting');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError('');
-
-    try {
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const isDetailed = interviewData.interview_mode === 'detailed';
-      const endpoint = isDetailed
-        ? `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/submit-round`
-        : `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/submit-answers`;
-
-      const payload = {
-        session_id: interviewData.session_id,
-        answers: answers
-      };
-
-      if (isDetailed) {
-        payload.round_number = currentRound;
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to submit interview');
-      }
-
-      const result = await response.json();
-
-      if (isDetailed && result.interview_continues) {
-        // Handle transition to next round
-        toast.success(result.message || `Round ${currentRound} Complete! Moving to next round...`);
-
-        // Update state for next round
-        setQuestions(result.next_questions);
-        setCurrentRound(result.next_round);
-        setRoundName(result.next_round_name);
-
-        // Reset answers for new questions
-        setAnswers(Array(result.next_questions.length).fill(''));
-        setCurrentQuestion(0);
-        setTranscribedAnswer('');
-
-        // Scroll to top
-        window.scrollTo(0, 0);
-      } else {
-        // Interview complete (or failed round)
-        if (isDetailed && result.message) {
-          if (result.passed) {
-            toast.success(result.message);
-          } else {
-            toast.info(result.message);
-          }
-        }
-
-        onSessionCreated({
-          ...interviewData,
-          thread_id: interviewData.session_id,
-          answers: answers,
-          feedback: isDetailed && result.scores ? result.scores.map(s => ({
-            marks: (s.correctness + s.clarity + s.structure + s.depth) / 4 * 10, // Assuming 0-10 scale for each, multiply by 10/10? No wait, backend returns 0-10.
-            // Wait, QuestionScore has 0-10. Average property returns 0-10.
-            // But Result.js expects marks to be comparable. getScoreColor checks >=8.
-            // Let's explicitly calculate average if not present.
-            marks: Math.round(((s.correctness + s.clarity + s.structure + s.depth) / 4) * 10) / 10,
-            feedback: s.feedback
-          })) : result.feedback,
-          roadmap: result.roadmap,
-          total_score: result.total_score || (result.scores ? result.scores.reduce((acc, s) => acc + ((s.correctness + s.clarity + s.structure + s.depth) / 4), 0) : 0),
-          average_score: result.average_score,
-          is_pinned: false,
-          fit_percentage: result.fit_percentage,
-          questions: questions
-        });
-
-        navigate('/results');
-      }
-    } catch (err) {
-      setError(err.message || 'Something went wrong');
-      toast.error(err.message || 'Failed to submit. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Anti-cheat ing: Log suspicious activity to backend
-  const logSuspiciousActivity = async (activityData) => {
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/proctoring/log`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
-        body: JSON.stringify({ ...activityData, sessionId })
-      });
-    } catch (error) {
-      console.error('Failed to log proctoring event:', error);
-    }
-  };
-
-  // Anti-cheating: Copy-paste prevention
+// Elapsed timer
+const Timer = ({ startTime }) => {
+  const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      toast.warning("Right-click is disabled during the interview");
-      return false;
-    };
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  return <span className="font-mono tabular-nums">{m}:{s}</span>;
+};
 
-    const handleKeyDown = (e) => {
-      // Prevent Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A
-      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a'].includes(e.key.toLowerCase())) {
-        e.preventDefault();
-        toast.warning("Copy-paste is disabled during the interview");
-        logSuspiciousActivity({
-          type: 'COPY_PASTE_ATTEMPT',
-          key: e.key,
-          timestamp: new Date().toISOString()
-        });
-        return false;
-      }
-
-      // Prevent F12 (devtools), Ctrl+U (view source)
-      if (e.keyCode === 123 || (e.ctrlKey && e.keyCode === 85)) {
-        e.preventDefault();
-        return false;
-      }
-    };
-
-    const handleCopy = (e) => { e.preventDefault(); };
-    const handleCut = (e) => { e.preventDefault(); };
-    const handlePaste = (e) => { e.preventDefault(); };
-
-    // Apply user-select: none to prevent text selection
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
-
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('copy', handleCopy);
-    document.addEventListener('cut', handleCut);
-    document.addEventListener('paste', handlePaste);
-
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('cut', handleCut);
-      document.removeEventListener('paste', handlePaste);
-      document.body.style.userSelect = 'auto';
-      document.body.style.webkitUserSelect = 'auto';
-    };
-  }, [toast]);
-
-  // Anti-cheating: Tab switching detection
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      const isVisible = !document.hidden;
-      setIsTabVisible(isVisible);
-
-      if (!isVisible) {
-        // User switched away from tab
-        const timestamp = new Date().toISOString();
-        const newCount = tabSwitchCount + 1;
-
-        setTabSwitchCount(newCount);
-        tabSwitchTimestamps.current.push({
-          timestamp,
-          action: 'tab_left',
-          visibilityState: document.visibilityState
-        });
-
-        // Log to backend
-        logSuspiciousActivity({
-          type: 'TAB_SWITCH',
-          count: newCount,
-          timestamp
-        });
-
-        // Show progressive warnings
-        if (newCount >= 5) {
-          toast.error("⚠️ CRITICAL: Excessive tab switching detected. Interview terminated.");
-
-          // Auto-terminate the interview
-          setTimeout(() => {
-            alert("Interview has been terminated due to excessive tab switching. This incident has been logged.");
-            navigate('/');
-          }, 2000);
-        } else if (newCount >= 3) {
-          toast.error(`⚠️ Warning: Multiple tab switches detected (${newCount}/5). Stay on this page.`);
-        } else {
-          toast.warning(`Tab switch detected (${newCount}/5). Please stay focused on the interview.`);
-        }
-      } else {
-        // User returned to tab
-        tabSwitchTimestamps.current.push({
-          timestamp: new Date().toISOString(),
-          action: 'tab_returned'
-        });
-      }
-    };
-
-    const handleBlur = () => {
-      // Window lost focus
-      logSuspiciousActivity({
-        type: 'WINDOW_BLUR',
-        timestamp: new Date().toISOString()
-      });
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleBlur);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
-    };
-  }, [tabSwitchCount, toast]);
-
+// Dimension score bar
+const ScoreBar = ({ label, value }) => {
+  const pct = Math.round((value / 10) * 100);
+  const color = value >= 7 ? '#22c55e' : value >= 5 ? '#f59e0b' : '#ef4444';
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col fixed inset-0 z-50" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-      {/* Tab Visibility Warning Banner */}
-      {!isTabVisible && (
-        <div className="fixed top-0 left-0 right-0 bg-red-600 text-white py-3 px-4 z-50 text-center font-semibold shadow-lg animate-pulse">
-          ⚠️ Please return to the interview tab. Your activity is being monitored.
-        </div>
-      )}
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="bg-gray-800 px-6 py-3 flex items-center justify-between border-b border-gray-700 flex-shrink-0">
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-white font-semibold flex items-center gap-2">
-                {interviewData.interview_mode === 'detailed' ? (
-                  <>
-                    <span className="bg-blue-900 text-blue-200 px-2 py-0.5 rounded text-xs uppercase tracking-wider">
-                      Round {currentRound}
-                    </span>
-                    {roundName}
-                  </>
-                ) : (
-                  'AI Interview'
-                )}
-              </h1>
-              <p className="text-gray-400 text-sm">
-                {interviewData.role} {interviewData.company && `at ${interviewData.company}`}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-400 flex items-center space-x-2">
-              <Clock className="h-4 w-4" />
-              <span>Question {currentQuestion + 1} of {questions.length}</span>
-            </div>
-            {/* Tab Switch Counter */}
-            <div className="text-xs text-gray-400 flex items-center space-x-2 border border-gray-600 px-2 py-1 rounded">
-              <span className={tabSwitchCount >= 3 ? 'text-red-400 font-semibold' : ''}>
-                Tab switches: {tabSwitchCount}/5
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to end this interview?')) {
-                  navigate('/');
-                }
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              End Interview
-            </button>
-          </div>
-        </div>
-
-        <div className="p-2 sm:p-4 sm:flex-1 overflow-auto" ref={videoMeetingRef}>
-          <RoboInterviewer
-            ref={roboInterviewerRef}
-            questionText={questions[currentQuestion]}
-            onRequestNextQuestion={() => {
-              if (currentQuestion < questions.length - 1) {
-                setCurrentQuestion(currentQuestion + 1);
-                setTranscribedAnswer('');
-              }
-            }}
-            isInterviewActive={!isSubmitting}
-          />
-        </div>
-
-        <div className="bg-gray-800 px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-700 flex-1 overflow-y-auto">
-          {error && (
-            <div className="mb-4 p-3 bg-red-900 border border-red-700 text-red-200 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div className="bg-gray-700 p-4 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  Q{currentQuestion + 1}
-                </div>
-                <div className="flex-1">
-                  <p className="text-white">{questions[currentQuestion]}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    if (roboInterviewerRef.current) {
-                      roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
-                    }
-                  }}
-                  className="flex-shrink-0 text-gray-400 hover:text-white"
-                  title="Listen to question"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-gray-700 p-4 rounded-lg">
-                <h3 className="text-white text-sm font-medium mb-3 flex items-center">
-                  <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                  Voice Answer
-                </h3>
-                <VoiceRecorder
-                  key={`recorder-${currentQuestion}`}
-                  questionIndex={currentQuestion}
-                  onRecordingComplete={handleVoiceRecordingComplete}
-                  onError={handleRecordingError}
-                  buttonText={answers[currentQuestion] ? 'Re-record Answer' : 'Record Answer'}
-                />
-
-                {transcribedAnswer && (
-                  <div className="mt-3 p-3 bg-gray-600 rounded-lg">
-                    <p className="text-xs text-gray-300 mb-1">Transcribed:</p>
-                    <p className="text-sm text-white">{transcribedAnswer}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-gray-700 p-4 rounded-lg flex flex-col">
-                <h3 className="text-white text-sm font-medium mb-3 flex items-center">
-                  <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Type Answer (Optional)
-                </h3>
-                <textarea
-                  value={answers[currentQuestion]}
-                  onChange={(e) => handleAnswerChange(e.target.value)}
-                  placeholder="Or type your answer here..."
-                  className="flex-1 px-3 py-2 bg-gray-600 text-white border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 resize-none"
-                  rows="4"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Navigation - Fixed at Bottom */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-2 space-y-2 z-50">
-          {/* Row 1: Previous / Next */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                if (currentQuestion > 0) {
-                  setCurrentQuestion(currentQuestion - 1);
-                  setTranscribedAnswer('');
-                }
-              }}
-              disabled={currentQuestion === 0}
-              className="flex-1 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-1 text-sm"
-            >
-              <ArrowRight className="h-4 w-4 rotate-180" />
-              Prev
-            </button>
-            <button
-              onClick={() => {
-                if (currentQuestion < questions.length - 1) {
-                  setCurrentQuestion(currentQuestion + 1);
-                  setTranscribedAnswer('');
-                }
-              }}
-              disabled={currentQuestion >= questions.length - 1}
-              className="flex-1 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50 flex items-center justify-center gap-1 text-sm"
-            >
-              Next
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Row 2: Ask Question / End Call / Submit */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                if (roboInterviewerRef.current) {
-                  roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
-                }
-              }}
-              className="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm"
-            >
-              🔊 Ask
-            </button>
-            {currentQuestion < questions.length - 1 ? (
-              <button
-                onClick={() => {
-                  if (currentQuestion < questions.length - 1) {
-                    setCurrentQuestion(currentQuestion + 1);
-                    setTranscribedAnswer('');
-                  }
-                }}
-                disabled={!answers[currentQuestion]?.trim()}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 text-sm"
-              >
-                Submit →
-              </button>
-            ) : (
-              <button
-                onClick={submitInterview}
-                disabled={isSubmitting || answers.some(answer => !answer?.trim())}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50 text-sm"
-              >
-                {isSubmitting ? '...' : 'Submit ✓'}
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (window.confirm('End interview?')) {
-                  navigate('/');
-                }
-              }}
-              className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm"
-            >
-              End
-            </button>
-          </div>
-        </div>
-
-        {/* Desktop Navigation - Horizontal */}
-        <div className="hidden sm:flex justify-between items-center">
-          <button
-            onClick={() => {
-              if (currentQuestion > 0) {
-                setCurrentQuestion(currentQuestion - 1);
-                setTranscribedAnswer('');
-              }
-            }}
-            disabled={currentQuestion === 0}
-            className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 flex items-center space-x-2"
-          >
-            <ArrowRight className="h-4 w-4 rotate-180" />
-            <span>Previous</span>
-          </button>
-
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => {
-                if (roboInterviewerRef.current) {
-                  roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
-                }
-              }}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
-              title="Replay question"
-            >
-              🔊
-            </button>
-            <button
-              onClick={() => {
-                if (roboInterviewerRef.current) {
-                  roboInterviewerRef.current.playQuestion(questions[currentQuestion]);
-                }
-              }}
-              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
-            >
-              Ask Question
-            </button>
-            <button
-              onClick={() => {
-                if (currentQuestion < questions.length - 1) {
-                  setCurrentQuestion(currentQuestion + 1);
-                  setTranscribedAnswer('');
-                }
-              }}
-              disabled={currentQuestion >= questions.length - 1}
-              className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 flex items-center space-x-2"
-            >
-              <span>Next</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to end this interview?')) {
-                  navigate('/');
-                }
-              }}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-            >
-              End Call
-            </button>
-          </div>
-
-          {currentQuestion < questions.length - 1 ? (
-            <button
-              onClick={() => {
-                if (currentQuestion < questions.length - 1) {
-                  setCurrentQuestion(currentQuestion + 1);
-                  setTranscribedAnswer('');
-                }
-              }}
-              disabled={!answers[currentQuestion]?.trim()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
-            >
-              <span>Submit & Next</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              onClick={submitInterview}
-              disabled={isSubmitting || answers.some(answer => !answer?.trim())}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Submit Interview</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span className="text-slate-300">{label}</span>
+        <span className="font-bold text-white">{value?.toFixed(1)}<span className="text-slate-500 font-normal">/10</span></span>
+      </div>
+      <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}88` }}
+        />
       </div>
     </div>
   );
 };
 
-export default Interview;
+export default function Interview({ interviewData }) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { user } = useAuth();
+  const roboRef = useRef(null);
+  const textareaRef = useRef(null);
+  const startTimeRef = useRef(Date.now());
+
+  const [currentQuestion, setCurrentQuestion] = useState(interviewData?.firstMessage || '');
+  const [messageType, setMessageType] = useState('question');
+  const [answer, setAnswer] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [completed, setCompleted] = useState(false);
+  const [result, setResult] = useState(null);
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
+
+  const plan = PLAN_META[interviewData?.plan_type] || PLAN_META.normal;
+
+  // Auto-play first question
+  useEffect(() => {
+    if (interviewData?.firstMessage) {
+      const t = setTimeout(() => roboRef.current?.playQuestion(interviewData.firstMessage), 700);
+      return () => clearTimeout(t);
+    }
+  }, [interviewData?.firstMessage]);
+
+  const submitAnswer = async () => {
+    if (!answer.trim() || isSubmitting) return;
+    setError('');
+    setIsSubmitting(true);
+    const sent = answer.trim();
+    setAnswer('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/interview/answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ thread_id: interviewData.thread_id, answer: sent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Something went wrong');
+
+      if (data.action === 'completed') {
+        setCurrentQuestion(data.message);
+        setMessageType('closing');
+        setResult(data);
+        setCompleted(true);
+        invalidateDashboardCache();
+        roboRef.current?.playQuestion(data.message);
+        toast.success('Interview complete!');
+      } else {
+        const type = data.action === 'ask_followup' ? 'follow_up' : 'question';
+        setCurrentQuestion(data.message);
+        setMessageType(type);
+        roboRef.current?.playQuestion(data.message);
+        textareaRef.current?.focus();
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to submit');
+      toast.error(err.message || 'Failed to submit answer');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submitAnswer(); }
+  };
+
+  // ── Results screen ──────────────────────────────────────────────────────────
+  if (completed && result) {
+    const overall = result.scores?.overall;
+    const scoreColor = overall >= 7 ? '#22c55e' : overall >= 5 ? '#f59e0b' : '#ef4444';
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4"
+        style={{ background: 'radial-gradient(ellipse at top, #0f172a 0%, #020617 100%)' }}>
+        <div className="w-full max-w-xl rounded-3xl overflow-hidden border border-white/8 shadow-2xl"
+          style={{ background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(24px)' }}>
+
+          {/* Header */}
+          <div className="px-6 py-5 flex items-center gap-4 border-b border-white/8"
+            style={{ background: 'linear-gradient(135deg, rgba(30,58,138,0.5) 0%, rgba(88,28,135,0.5) 100%)' }}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-green-500/20 border border-green-500/30">
+              <CheckCircle className="w-6 h-6 text-green-400" />
+            </div>
+            <div>
+              <p className="font-bold text-white text-lg leading-tight">Interview Complete</p>
+              <p className="text-slate-400 text-sm">{interviewData?.role} · {plan.label}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-xs text-slate-500 uppercase tracking-wider">Score</p>
+              <p className="text-3xl font-black" style={{ color: scoreColor }}>
+                {overall?.toFixed(1)}<span className="text-sm text-slate-400 font-normal">/10</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+
+            {/* Dimension bars */}
+            <div className="space-y-3 p-4 rounded-2xl border border-white/6"
+              style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Dimension Scores</p>
+              {[
+                ['Technical',        result.scores?.technical],
+                ['Communication',    result.scores?.communication],
+                ['Leadership',       result.scores?.leadership],
+                ['Critical Thinking',result.scores?.critical_thinking],
+                ['Decision Making',  result.scores?.decision_making],
+                ['Project Knowledge',result.scores?.project_knowledge],
+              ].filter(([, v]) => v != null).map(([label, value]) => (
+                <ScoreBar key={label} label={label} value={value} />
+              ))}
+            </div>
+
+            {/* Strengths */}
+            {result.strengths?.length > 0 && (
+              <div className="p-4 rounded-2xl border border-green-500/20"
+                style={{ background: 'rgba(34,197,94,0.06)' }}>
+                <p className="text-xs font-bold text-green-400 uppercase tracking-widest mb-3">Strengths</p>
+                <ul className="space-y-2">
+                  {result.strengths.map((s, i) => (
+                    <li key={i} className="text-sm text-slate-300 flex items-start gap-2.5">
+                      <span className="text-green-400 mt-0.5 flex-shrink-0 text-base leading-none">✓</span>{s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Weak areas */}
+            {result.weak_areas?.length > 0 && (
+              <div className="p-4 rounded-2xl border border-amber-500/20"
+                style={{ background: 'rgba(245,158,11,0.06)' }}>
+                <p className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3">Areas to Improve</p>
+                <ul className="space-y-2">
+                  {result.weak_areas.map((w, i) => (
+                    <li key={i} className="text-sm text-slate-300 flex items-start gap-2.5">
+                      <span className="text-amber-400 mt-0.5 flex-shrink-0">→</span>{w}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Roadmap */}
+            {result.roadmap && (
+              <div className="p-4 rounded-2xl border border-blue-500/20"
+                style={{ background: 'rgba(59,130,246,0.06)' }}>
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Learning Roadmap</p>
+                <p className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">{result.roadmap}</p>
+              </div>
+            )}
+
+            {result.credits_used && (
+              <p className="text-center text-xs text-slate-600">
+                {result.credits_used} credits used · {result.credits_remaining ?? '–'} remaining
+              </p>
+            )}
+
+            <button onClick={() => navigate('/')}
+              className={`w-full py-3.5 bg-gradient-to-r ${plan.gradient} text-white font-bold rounded-2xl hover:opacity-90 active:scale-[0.98] transition-all shadow-lg`}>
+              Start Another Interview
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Meeting UI ──────────────────────────────────────────────────────────────
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: 'radial-gradient(ellipse at top left, #0d1526 0%, #020617 100%)' }}>
+
+      {/* ── Top bar ── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 border-b border-white/6"
+        style={{ background: 'rgba(10,14,26,0.9)', backdropFilter: 'blur(16px)' }}>
+
+        <div className="flex items-center gap-3">
+          {/* Animated live dot */}
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-red-500/30 bg-red-500/10">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+            <span className="text-xs font-semibold text-red-400 tracking-wider">LIVE</span>
+          </div>
+
+          <div className="w-px h-5 bg-white/10" />
+
+          <div>
+            <p className="text-white font-semibold text-sm leading-tight">{interviewData?.role || 'Interview'}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={`text-xs font-semibold bg-gradient-to-r ${plan.gradient} bg-clip-text text-transparent`}>
+                {plan.label}
+              </span>
+              {messageType === 'follow_up' && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="text-xs text-violet-400 font-medium">Follow-up</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-slate-400 flex items-center gap-2">
+            <span className="text-slate-600">⏱</span>
+            <Timer startTime={startTimeRef.current} />
+          </div>
+          <button
+            onClick={() => { if (window.confirm('End this interview?')) navigate('/'); }}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500/15 border border-red-500/30 text-red-400 text-sm font-semibold rounded-xl hover:bg-red-500/25 transition-all"
+          >
+            <PhoneOff className="w-4 h-4" /> End Interview
+          </button>
+        </div>
+      </div>
+
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+        {/* ── Left: Video tiles ── */}
+        <div className="flex-1 p-3 min-h-0 min-w-0" style={{ display: 'flex', flexDirection: 'column' }}>
+          <RoboInterviewer
+            ref={roboRef}
+            questionText={currentQuestion}
+            onRequestNextQuestion={() => {}}
+            isInterviewActive={!isSubmitting}
+          />
+        </div>
+
+        {/* ── Right: Question + Answer panel ── */}
+        <div className="w-full lg:w-96 flex flex-col border-t lg:border-t-0 lg:border-l border-white/6 flex-shrink-0"
+          style={{ background: 'rgba(10,14,26,0.7)', backdropFilter: 'blur(12px)' }}>
+
+          {/* Panel header */}
+          <div className="px-4 py-3 border-b border-white/6">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Current Question</p>
+          </div>
+
+          {/* Question card */}
+          <div className="px-4 pt-4 pb-2">
+            <div className="relative p-4 rounded-2xl border border-white/8 overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, rgba(30,58,138,0.3) 0%, rgba(15,23,42,0.5) 100%)' }}>
+              {/* Decorative glow */}
+              <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none"
+                style={{ background: plan.glow, filter: 'blur(32px)', transform: 'translate(30%, -30%)' }} />
+
+              <div className="flex items-start gap-3 relative">
+                <div className={`flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br ${plan.gradient} flex items-center justify-center text-white text-xs font-bold shadow-lg`}>
+                  {messageType === 'follow_up' ? '↩' : 'Q'}
+                </div>
+                <p className="text-slate-100 text-sm leading-relaxed flex-1">{currentQuestion}</p>
+              </div>
+
+              <button
+                onClick={() => roboRef.current?.playQuestion(currentQuestion)}
+                className="mt-3 ml-11 flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+              >
+                <Volume2 className="w-3.5 h-3.5" /> Listen again
+              </button>
+            </div>
+          </div>
+
+          {/* Answer area */}
+          <div className="flex-1 flex flex-col px-4 pb-4 pt-2 min-h-0">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 mt-2">Your Answer</p>
+
+            <div className="flex-1 relative rounded-2xl border border-white/8 overflow-hidden transition-all focus-within:border-blue-500/50"
+              style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <textarea
+                ref={textareaRef}
+                value={answer}
+                onChange={e => setAnswer(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder="Type your answer here…"
+                disabled={isSubmitting}
+                className="absolute inset-0 w-full h-full px-4 py-3 bg-transparent text-slate-100 placeholder-slate-600 text-sm resize-none outline-none leading-relaxed"
+              />
+            </div>
+
+            {error && (
+              <div className="mt-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{error}</div>
+            )}
+
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs text-slate-600 flex-1">Ctrl+Enter to send</span>
+              <button
+                onClick={submitAnswer}
+                disabled={isSubmitting || !answer.trim()}
+                className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r ${plan.gradient} text-white text-sm font-bold rounded-xl disabled:opacity-40 hover:opacity-90 active:scale-[0.97] transition-all shadow-lg`}
+                style={{ boxShadow: answer.trim() && !isSubmitting ? `0 0 20px ${plan.glow}` : 'none' }}
+              >
+                {isSubmitting ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Thinking…</>
+                ) : (
+                  <><Send className="w-4 h-4" /> Submit</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bottom controls ── */}
+      <div className="flex-shrink-0 flex items-center justify-center gap-3 py-3 border-t border-white/6"
+        style={{ background: 'rgba(10,14,26,0.9)', backdropFilter: 'blur(16px)' }}>
+
+        {[
+          {
+            icon: micOn ? Mic : MicOff,
+            label: micOn ? 'Mute' : 'Unmuted',
+            active: micOn,
+            onClick: () => setMicOn(v => !v),
+          },
+          {
+            icon: camOn ? Video : VideoOff,
+            label: camOn ? 'Stop Video' : 'Start Video',
+            active: camOn,
+            onClick: () => setCamOn(v => !v),
+          },
+        ].map(({ icon: Icon, label, active, onClick }) => (
+          <button key={label} onClick={onClick}
+            className={`flex flex-col items-center gap-1 px-5 py-2 rounded-xl transition-all ${
+              active
+                ? 'bg-white/6 hover:bg-white/10 text-white'
+                : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/25'
+            }`}>
+            <Icon className="w-5 h-5" />
+            <span className="text-[10px] font-medium opacity-70">{label}</span>
+          </button>
+        ))}
+
+        <button
+          onClick={() => roboRef.current?.playQuestion(currentQuestion)}
+          className="flex flex-col items-center gap-1 px-5 py-2 rounded-xl bg-white/6 hover:bg-white/10 text-white transition-all"
+        >
+          <Volume2 className="w-5 h-5" />
+          <span className="text-[10px] font-medium opacity-70">Replay</span>
+        </button>
+
+        <div className="w-px h-8 bg-white/10 mx-1" />
+
+        <button
+          onClick={() => { if (window.confirm('End this interview?')) navigate('/'); }}
+          className="flex flex-col items-center gap-1 px-5 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white transition-all shadow-lg"
+          style={{ boxShadow: '0 0 20px rgba(239,68,68,0.3)' }}
+        >
+          <PhoneOff className="w-5 h-5" />
+          <span className="text-[10px] font-medium">End Call</span>
+        </button>
+      </div>
+    </div>
+  );
+}

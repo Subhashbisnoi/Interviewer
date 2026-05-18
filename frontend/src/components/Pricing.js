@@ -1,406 +1,272 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Zap, Crown, Shield } from 'lucide-react';
+import { Zap, Cpu, Award, CreditCard, CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import AuthModal from './auth/AuthModal';
+
+const API = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+const PLAN_META = {
+  normal: { icon: Zap, gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-700' },
+  thunder: { icon: Cpu, gradient: 'from-purple-500 to-purple-600', light: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-700', tag: 'Popular' },
+  max: { icon: Award, gradient: 'from-amber-500 to-orange-500', light: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-700', tag: 'Best' },
+};
+
+const PKG_META = {
+  credits_50: { tag: null },
+  credits_100: { tag: 'Popular' },
+  credits_200: { tag: 'Best Value' },
+};
 
 const Pricing = () => {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [subscription, setSubscription] = useState(null);
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const [purchasing, setPurchasing] = useState(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [pendingPkg, setPendingPkg] = useState(null);
 
   useEffect(() => {
-    fetchPlans();
-    if (user) {
-      fetchSubscription();
-    }
-  }, [user]);
+    if (user) refreshUser();
+    fetch(`${API}/payment/plans`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setPlans(d); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line
 
-  const fetchPlans = async () => {
-    try {
-      const timestamp = new Date().getTime();
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/plans?_t=${timestamp}`);
-      const data = await response.json();
-      console.log('Fetched plans data:', data);
-      if (data.success) {
-        setPlans(data);
-      }
-    } catch (error) {
-      console.error('Error fetching plans:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadRazorpay = () =>
+    new Promise(resolve => {
+      if (window.Razorpay) return resolve(true);
+      const s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.body.appendChild(s);
+    });
 
-  const fetchSubscription = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/subscription`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      const data = await response.json();
-      if (data.success) {
-        setSubscription(data.subscription);
-      }
-    } catch (error) {
-      console.error('Error fetching subscription:', error);
-    }
-  };
-
-  const handleUpgrade = async (planType) => {
+  const handlePurchase = async (pkgKey) => {
     if (!user) {
-      navigate('/login');
+      setPendingPkg(pkgKey);
+      setShowAuth(true);
       return;
     }
+    await doPurchase(pkgKey);
+  };
 
+  const doPurchase = async (pkgKey) => {
+    setPurchasing(pkgKey);
     try {
+      const loaded = await loadRazorpay();
+      if (!loaded) throw new Error('Payment gateway failed to load');
+
       const token = localStorage.getItem('token');
-      
-      // Create order
-      const orderResponse = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/create-order`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ plan_type: planType })
-        }
-      );
+      const orderRes = await fetch(`${API}/credits/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ package_type: pkgKey }),
+      });
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.detail || 'Failed to create order');
 
-      const orderData = await orderResponse.json();
-      
-      if (!orderData.success) {
-        throw new Error('Failed to create order');
-      }
-
-      // Initialize Razorpay
       const options = {
-        key: orderData.key_id,
-        amount: orderData.order.amount,
-        currency: orderData.order.currency,
-        name: 'AI Interviewer',
-        description: orderData.order.plan_description,
-        order_id: orderData.order.order_id,
-        handler: async function (response) {
-          // Verify payment
-          const verifyResponse = await fetch(
-            `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/payment/verify`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
-              })
-            }
-          );
-
-          const verifyData = await verifyResponse.json();
-          
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: 'INR',
+        name: 'InterviewForge',
+        description: `${orderData.package.name} – ${orderData.package.credits} Credits`,
+        order_id: orderData.order_id,
+        handler: async (response) => {
+          const verifyRes = await fetch(`${API}/credits/verify-payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              package_type: pkgKey,
+            }),
+          });
+          const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            alert('Payment successful! Your premium subscription is now active.');
+            alert(`✅ ${verifyData.message}`);
             window.location.reload();
           } else {
             alert('Payment verification failed. Please contact support.');
           }
         },
-        prefill: {
-          name: user.full_name || '',
-          email: user.email || '',
-        },
-        theme: {
-          color: '#4F46E5'
-        }
+        prefill: { email: user?.email || '' },
+        theme: { color: '#6366f1' },
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      alert('Failed to process payment. Please try again.');
+      new window.Razorpay(options).open();
+    } catch (err) {
+      alert(err.message || 'Payment failed. Please try again.');
+    } finally {
+      setPurchasing(null);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // If user is premium, show subscription management page
-  if (subscription?.tier === 'premium') {
-    const expiryDate = subscription.expires_at ? new Date(subscription.expires_at) : null;
-    const today = new Date();
-    const daysRemaining = expiryDate ? Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+  const interviewPlans = plans?.interview_plans || {};
+  const creditPackages = plans?.credit_packages || {};
 
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Crown className="h-10 w-10 text-gray-900" />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Premium Subscription Active
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400">
-            Enjoy unlimited interviews and premium features
-          </p>
+  return (
+    <div className="min-h-screen bg-white dark:bg-slate-950 py-16 px-4">
+      {/* Header */}
+      <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+          <CreditCard className="w-4 h-4" /> Credit-based pricing
         </div>
-
-        {/* Subscription Details */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-8 mb-8 border border-blue-200 dark:border-blue-800">
-          <div className="grid md:grid-cols-3 gap-6 text-center">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Current Plan</h3>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">Premium</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Status</h3>
-              <p className="text-2xl font-bold text-green-600">Active</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Days Remaining</h3>
-              <p className="text-2xl font-bold text-orange-600">
-                {daysRemaining > 0 ? `${daysRemaining} days` : 'Expired'}
-              </p>
-            </div>
-          </div>
-          
-          {expiryDate && (
-            <div className="mt-6 text-center">
-              <p className="text-gray-600 dark:text-gray-400">
-                Your subscription expires on {expiryDate.toLocaleDateString('en-IN', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Premium Features */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            Your Premium Features
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {plans?.features?.premium?.features.map((feature, index) => (
-              <div key={index} className="flex items-center">
-                <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                <span className="text-gray-700 dark:text-gray-300">{feature}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Renewal Options */}
-        {daysRemaining <= 7 && daysRemaining > 0 && (
-          <div className="mt-8 bg-blue-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-200 mb-4">
-              🔔 Subscription Expiring Soon
-            </h3>
-            <p className="text-orange-700 dark:text-blue-700 mb-4">
-              Your premium subscription expires in {daysRemaining} days. Renew now to continue enjoying unlimited interviews.
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => handleUpgrade('monthly')}
-                className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Renew Monthly (₹{plans?.plans?.monthly?.amount_inr})
-              </button>
-              <button
-                onClick={() => handleUpgrade('yearly')}
-                className="px-6 py-2 bg-orange-800 hover:bg-orange-900 text-white rounded-lg font-medium transition-colors"
-              >
-                Renew Yearly (₹{plans?.plans?.yearly?.amount_inr})
-              </button>
-            </div>
+        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4">
+          Pay only for what you use
+        </h1>
+        <p className="text-lg text-slate-500 dark:text-slate-400">
+          Buy credits once, use them for any interview plan. No subscriptions, no monthly fees.
+          New accounts get <span className="font-bold text-blue-500">20 free credits</span>.
+        </p>
+        {user && (
+          <div className="mt-4 inline-flex items-center gap-2 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-2 rounded-xl text-sm font-semibold border border-green-200 dark:border-green-700">
+            <CheckCircle className="w-4 h-4" />
+            Your balance: {user.credits ?? 0} credits
           </div>
         )}
       </div>
-    );
-  }
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-12">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-          Choose Your Plan
-        </h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">
-          Start free, upgrade when you're ready
-        </p>
-      </div>
+      {/* Interview Plans */}
+      <div className="max-w-5xl mx-auto mb-20">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-8">Interview Plans</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Object.entries(interviewPlans).map(([key, plan]) => {
+            const meta = PLAN_META[key] || {};
+            const Icon = meta.icon || Zap;
+            return (
+              <div
+                key={key}
+                className={`relative rounded-3xl p-6 border-2 ${meta.border} ${meta.light} transition-all hover:scale-[1.02]`}
+              >
+                {meta.tag && (
+                  <span className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r ${meta.gradient} text-white`}>
+                    {meta.tag}
+                  </span>
+                )}
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${meta.gradient} flex items-center justify-center mb-4`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{plan.name}</h3>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Powered by {plan.model}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{plan.description}</p>
+                <div className="text-lg font-bold text-slate-900 dark:text-white">{plan.credit_range}</div>
+                <div className="text-xs text-slate-400">per interview (varies by length)</div>
 
-      {/* Current Subscription Status */}
-      {subscription && (
-        <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                Current Plan: {subscription.tier === 'premium' ? '👑 Premium' : '🆓 Free'}
-              </p>
-              <p className="text-xs text-blue-500 dark:text-blue-300 mt-1">
-                {subscription.tier === 'free' 
-                  ? `${subscription.interviews_remaining || 0} interviews remaining this month`
-                  : subscription.expires_at ? (() => {
-                      const expiryDate = new Date(subscription.expires_at);
-                      const today = new Date();
-                      const diffTime = expiryDate.getTime() - today.getTime();
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                      
-                      if (diffDays > 0) {
-                        return `Unlimited interviews • ${diffDays} days remaining`;
-                      } else if (diffDays === 0) {
-                        return 'Unlimited interviews • Expires today';
-                      } else {
-                        return 'Unlimited interviews • Subscription expired';
-                      }
-                    })() : 'Unlimited interviews • Active'
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Pricing Cards */}
-      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-        {/* Free Tier */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border-2 border-gray-200 dark:border-gray-700">
-          <div className="flex items-center mb-4">
-            <Shield className="h-8 w-8 text-gray-500 mr-3" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Free</h2>
-          </div>
-          
-          <div className="mb-6">
-            <span className="text-4xl font-bold text-gray-900 dark:text-white">₹0</span>
-            <span className="text-gray-600 dark:text-gray-400">/month</span>
-          </div>
-
-          <ul className="space-y-3 mb-8">
-            {plans?.features?.free?.features.map((feature, index) => (
-              <li key={index} className="flex items-start">
-                <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700 dark:text-gray-300">{feature}</span>
-              </li>
-            ))}
-          </ul>
-
-          <button
-            disabled
-            className="w-full py-3 px-6 rounded-lg bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-semibold cursor-not-allowed"
-          >
-            Current Plan
-          </button>
-        </div>
-
-        {/* Premium Tier */}
-        <div className="bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl shadow-2xl p-8 relative">
-          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-            <span className="bg-yellow-400 text-gray-900 px-4 py-1 rounded-full text-sm font-bold">
-              MOST POPULAR
-            </span>
-          </div>
-
-          <div className="flex items-center mb-4">
-            <Crown className="h-8 w-8 text-yellow-300 mr-3" />
-            <h2 className="text-2xl font-bold text-white">Premium</h2>
-          </div>
-          
-          <div className="mb-2">
-            <span className="text-4xl font-bold text-white">
-              ₹{plans?.plans?.monthly?.amount_inr}
-            </span>
-            <span className="text-primary-100">/month</span>
-          </div>
-          
-          <p className="text-primary-100 text-sm mb-6">
-            or ₹{plans?.plans?.yearly?.amount_inr}/year (Save ₹{plans?.plans?.monthly?.amount_inr ? ((plans.plans.monthly.amount_inr * 12) - plans.plans.yearly.amount_inr).toFixed(0) : '89'})
-          </p>
-
-          <ul className="space-y-3 mb-8">
-            {plans?.features?.premium?.features.map((feature, index) => (
-              <li key={index} className="flex items-start">
-                <Check className="h-5 w-5 text-yellow-300 mr-2 flex-shrink-0 mt-0.5" />
-                <span className="text-white">{feature}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="space-y-3">
-            <button
-              onClick={() => handleUpgrade('monthly')}
-              disabled={subscription?.tier === 'premium'}
-              className="w-full py-3 px-6 rounded-lg bg-white text-primary-600 font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              <Zap className="h-5 w-5 mr-2" />
-              {subscription?.tier === 'premium' ? 'Current Plan' : 'Upgrade Monthly'}
-            </button>
-            
-            <button
-              onClick={() => handleUpgrade('yearly')}
-              disabled={subscription?.tier === 'premium'}
-              className="w-full py-3 px-6 rounded-lg bg-primary-800 text-white font-semibold hover:bg-primary-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {subscription?.tier === 'premium' ? 'Current Plan' : 'Upgrade Yearly (Save 17%)'}
-            </button>
-          </div>
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600 space-y-2">
+                  {[
+                    'Adaptive follow-up questions',
+                    '6-dimension evaluation',
+                    'Personalised roadmap',
+                    'Performance stored in profile',
+                  ].map(f => (
+                    <div key={f} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      {f}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* FAQ Section */}
-      <div className="mt-16 max-w-3xl mx-auto">
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-          Frequently Asked Questions
-        </h3>
-        
+      {/* Credit Packages */}
+      <div className="max-w-4xl mx-auto mb-16">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-2">Buy Credits</h2>
+        <p className="text-center text-slate-400 mb-8 text-sm">Credits never expire. Buy once, use anytime.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {Object.entries(creditPackages).map(([key, pkg]) => {
+            const pkgMeta = PKG_META[key] || {};
+            const isPopular = pkgMeta.tag === 'Popular';
+            return (
+              <div
+                key={key}
+                className={`relative rounded-3xl p-6 border-2 transition-all hover:scale-[1.02] ${
+                  isPopular
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-xl shadow-blue-500/20'
+                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                }`}
+              >
+                {pkgMeta.tag && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+                    {pkgMeta.tag}
+                  </span>
+                )}
+                <div className="text-center mb-4">
+                  <Sparkles className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white">{pkg.credits}</div>
+                  <div className="text-slate-500 dark:text-slate-400 text-sm">credits</div>
+                </div>
+                <div className="text-center mb-2">
+                  <span className="text-4xl font-extrabold text-slate-900 dark:text-white">₹{pkg.price_inr}</span>
+                </div>
+                <p className="text-center text-slate-500 dark:text-slate-400 text-sm mb-6">{pkg.description}</p>
+
+                <button
+                  onClick={() => handlePurchase(key)}
+                  disabled={purchasing === key}
+                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                    isPopular
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90 shadow-lg'
+                      : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90'
+                  } disabled:opacity-50`}
+                >
+                  {purchasing === key ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>Buy Credits <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div className="max-w-2xl mx-auto">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-8">Common questions</h2>
         <div className="space-y-4">
-          <details className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer">
-              Can I cancel anytime?
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Yes! You can cancel your subscription at any time. You'll continue to have access to premium features until the end of your billing period.
-            </p>
-          </details>
-
-          <details className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer">
-              What payment methods do you accept?
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              We accept all major credit/debit cards, UPI, net banking, and wallets through Razorpay.
-            </p>
-          </details>
-
-          <details className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer">
-              Is my payment information secure?
-            </summary>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Absolutely! We use Razorpay, a PCI DSS compliant payment gateway. We never store your card details.
-            </p>
-          </details>
+          {[
+            { q: 'Do credits expire?', a: 'No. Credits you purchase never expire — use them at your own pace.' },
+            { q: 'Why do interviews cost different credits?', a: 'The AI adapts to each session. Longer, more complex conversations use more tokens and therefore more credits. Normal interviews cost 13–17, Thunder 33–39, Max 55–60.' },
+            { q: 'Can I get a refund?', a: 'Unused credits can be refunded within 7 days of purchase. Contact us at support@interviewforge.live.' },
+            { q: 'How do recruiters see my profile?', a: 'Once you complete interviews, your scores are added to your profile. Verified recruiters can search by role, skills, and score — you control visibility in your profile settings.' },
+          ].map((item, i) => (
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
+              <div className="font-semibold text-slate-900 dark:text-white mb-1">{item.q}</div>
+              <div className="text-slate-500 dark:text-slate-400 text-sm">{item.a}</div>
+            </div>
+          ))}
         </div>
       </div>
+
+      {showAuth && (
+        <AuthModal
+          isOpen={showAuth}
+          onClose={() => { setShowAuth(false); setPendingPkg(null); }}
+          onSuccess={() => {
+            setShowAuth(false);
+            if (pendingPkg) { doPurchase(pendingPkg); setPendingPkg(null); }
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -22,12 +22,31 @@ from database import Base, engine
 
 # Import the routers after database initialization
 from api.interview import router as interview_router
-from api.interview_v2 import router as interview_v2_router
-from api.tts import router as tts_router
-from api.voice import router as voice_router
 from api.auth import router as auth_router
 from api.payment import router as payment_router
+from api.credits import router as credits_router
+from api.profile import router as profile_router
+from api.company import router as company_router
 from api.admin import router as admin_router
+
+# Legacy routers — imported conditionally so missing deps don't break startup
+try:
+    from api.interview_v2 import router as interview_v2_router
+    _has_v2 = True
+except Exception:
+    _has_v2 = False
+
+try:
+    from api.tts import router as tts_router
+    _has_tts = True
+except Exception:
+    _has_tts = False
+
+try:
+    from api.voice import router as voice_router
+    _has_voice = True
+except Exception:
+    _has_voice = False
 
 app = FastAPI(
     title="AI Interviewer API",
@@ -84,11 +103,18 @@ async def options_handler(request: Request, response: Response):
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.include_router(payment_router)
+app.include_router(credits_router)
+app.include_router(profile_router)
+app.include_router(company_router)
 app.include_router(interview_router)
-app.include_router(interview_v2_router)
-app.include_router(tts_router)
-app.include_router(voice_router)
 app.include_router(admin_router)
+
+if _has_v2:
+    app.include_router(interview_v2_router)
+if _has_tts:
+    app.include_router(tts_router)
+if _has_voice:
+    app.include_router(voice_router)
 
 # Basic routes
 @app.get("/")

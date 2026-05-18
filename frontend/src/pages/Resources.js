@@ -12,10 +12,10 @@ const Resources = () => {
     ];
 
     const industryInsights = [
-        { title: '2025 Tech Hiring Trends', excerpt: 'AI and ML roles see 150% increase in demand. Remote-first companies now offering competitive packages...', date: 'Aug 2025', tag: 'Trending' },
-        { title: 'What Recruiters Really Look For', excerpt: 'We interviewed 50 tech recruiters to understand what makes candidates stand out in 2025...', date: 'Aug 2025', tag: 'Insights' },
-        { title: 'Salary Negotiation Strategies', excerpt: 'Learn how to negotiate your offer effectively. Real data from successful negotiations...', date: 'Jul 2025', tag: 'Career' },
-        { title: 'Remote Interview Best Practices', excerpt: 'With 70% of interviews now virtual, here\'s how to make a great impression online...', date: 'Jul 2025', tag: 'Tips' }
+        { title: '2026 Tech Hiring Trends', excerpt: 'AI and ML roles see 150% increase in demand. Remote-first companies now offering competitive packages...', date: 'Aug 2026', tag: 'Trending' },
+        { title: 'What Recruiters Really Look For', excerpt: 'We interviewed 50 tech recruiters to understand what makes candidates stand out in 2026...', date: 'Aug 2026', tag: 'Insights' },
+        { title: 'Salary Negotiation Strategies', excerpt: 'Learn how to negotiate your offer effectively. Real data from successful negotiations...', date: 'Jul 2026', tag: 'Career' },
+        { title: 'Remote Interview Best Practices', excerpt: 'With 70% of interviews now virtual, here\'s how to make a great impression online...', date: 'Jul 2026', tag: 'Tips' }
     ];
 
     const companyGuides = [

@@ -1,57 +1,40 @@
 import os
+import io
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
 import pdfplumber
-import io
-
 from PyPDF2 import PdfReader
-# Load environment variables
+
 load_dotenv()
 
-# Configure OpenAI client with environment variables
-os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_BASE_URL"] = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+# Use OpenRouter for all LLM calls
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1")
 
+os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY or ""
+os.environ["OPENAI_BASE_URL"] = OPENROUTER_BASE_URL
 
-# Shared LLM instances
+# Default shared LLM instances (normal plan model)
 generator_llm = ChatOpenAI(
-    model="gpt-4o-mini"
+    model="openai/gpt-4o",
+    openai_api_key=OPENROUTER_API_KEY,
+    openai_api_base=OPENROUTER_BASE_URL,
 )
 feedback_llm = ChatOpenAI(
-    model="gpt-4o-mini"
+    model="openai/gpt-4o",
+    openai_api_key=OPENROUTER_API_KEY,
+    openai_api_base=OPENROUTER_BASE_URL,
 )
 
+
 def extract_resume_text(pdf_bytes: bytes) -> str:
-    """
-    Extract text from PDF bytes using multiple fallback methods.
-    
-    Args:
-        pdf_bytes: The PDF file contents as bytes
-        
-    Returns:
-        str: Extracted text from the PDF, or empty string if extraction failed
-    """
-    if not pdf_bytes:
-        print("Error: No PDF data provided")
+    if not pdf_bytes or not isinstance(pdf_bytes, bytes) or len(pdf_bytes) < 4:
         return ""
-        
-    if not isinstance(pdf_bytes, bytes):
-        print("Error: Expected bytes input")
-        return ""
-        
-    if len(pdf_bytes) < 4:  # Minimum size for a valid PDF header
-        print("Error: PDF file is too small to be valid")
-        return ""
-        
-    # Check for PDF header (first 4 bytes should be '%PDF')
     if not pdf_bytes.startswith(b'%PDF'):
-        print("Error: File does not appear to be a valid PDF (missing PDF header)")
         return ""
-    
+
     text = ""
-    
-    # First attempt: pdfplumber (better for complex layouts)
+
     try:
         with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
             for i, page in enumerate(pdf.pages):
@@ -59,17 +42,13 @@ def extract_resume_text(pdf_bytes: bytes) -> str:
                     page_text = page.extract_text(x_tolerance=1, y_tolerance=1) or ""
                     if page_text.strip():
                         text += f"\n--- Page {i+1} ---\n{page_text}\n"
-                except Exception as page_error:
-                    print(f"Error extracting text from page {i+1}: {str(page_error)}")
+                except Exception:
                     continue
-                    
         if text.strip():
             return text.strip()
-            
-    except Exception as e:
-        print(f"pdfplumber failed: {str(e)}")
-    
-    # Second attempt: PyPDF2 (more lenient with some PDFs)
+    except Exception:
+        pass
+
     try:
         reader = PdfReader(io.BytesIO(pdf_bytes))
         for i, page in enumerate(reader.pages):
@@ -77,65 +56,26 @@ def extract_resume_text(pdf_bytes: bytes) -> str:
                 page_text = page.extract_text() or ""
                 if page_text.strip():
                     text += f"\n--- Page {i+1} ---\n{page_text}\n"
-            except Exception as page_error:
-                print(f"PyPDF2 error on page {i+1}: {str(page_error)}")
+            except Exception:
                 continue
-                
         if text.strip():
             return text.strip()
-            
-    except Exception as e:
-        print(f"PyPDF2 failed: {str(e)}")
-    
-    print("All text extraction methods failed")
+    except Exception:
+        pass
+
     return ""
 
-def generate_job_description(role: str, company: str) -> str:
-    """
-    Generate a job description using LLM based on role and company.
-    
-    Args:
-        role: Job role/title
-        company: Company name
-        
-    Returns:
-        str: Generated job description
-    """
+
+def generate_job_description(role: str) -> str:
+    """Generate a realistic JD for the given role (no company context needed)."""
+    from langchain_core.messages import SystemMessage, HumanMessage
+
     messages = [
-        SystemMessage(content="""You are an expert recruiter creating job descriptions.
-Generate a comprehensive, realistic job description that includes:
-1. Role overview and responsibilities
-2. Required qualifications and skills
-3. Preferred qualifications
-4. Key competencies needed for success
-
-Make it specific to the role and company culture when possible."""),
-        HumanMessage(content=f"""Generate a job description for:
-
-Role: {role}
-Company: {company}
-
-Create a detailed, professional JD that would be used for actual hiring.""")
+        SystemMessage(content="You are an expert recruiter. Generate a concise, realistic job description."),
+        HumanMessage(content=f"Write a job description for the role: {role}. Include responsibilities, required skills, and nice-to-haves. Keep it under 300 words."),
     ]
-    
     try:
         response = generator_llm.invoke(messages)
-        jd = response.content if hasattr(response, 'content') else str(response)
-        return jd.strip()
-    except Exception as e:
-        print(f"Error generating JD: {e}")
-        # Fallback simple JD
-        return f"""Job Title: {role}
-Company: {company}
-
-We are seeking a talented {role} to join our team. The ideal candidate will have relevant experience and skills for this position.
-
-Responsibilities:
-- Perform duties related to {role}
-- Collaborate with team members
-- Contribute to company goals
-
-Requirements:
-- Experience in {role} or related field
-- Strong communication skills
-- Problem-solving abilities"""
+        return (response.content if hasattr(response, "content") else str(response)).strip()
+    except Exception:
+        return f"We are looking for a talented {role} to join our team."

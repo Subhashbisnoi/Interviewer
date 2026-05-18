@@ -6,9 +6,16 @@ import { Star, Clock, Calendar, Download, X, Target, TrendingUp, CheckCircle, Al
 import ReactMarkdown from 'react-markdown';
 import PinButton from './PinButton';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const CACHE_TTL = 15 * 60 * 1000;
+
 const PinnedResults = () => {
-  const [pinnedSessions, setPinnedSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pinnedSessions, setPinnedSessions] = useState(() => {
+    try { const r = localStorage.getItem('cache_pinned'); return r ? JSON.parse(r).data : []; } catch { return []; }
+  });
+  const [loading, setLoading] = useState(() => {
+    try { return !localStorage.getItem('cache_pinned'); } catch { return true; }
+  });
   const [error, setError] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const { user } = useAuth();
@@ -16,37 +23,31 @@ const PinnedResults = () => {
 
   useEffect(() => {
     if (user) {
-      fetchPinnedSessions();
+      const cached = (() => { try { const r = localStorage.getItem('cache_pinned'); if (!r) return null; const { data, ts } = JSON.parse(r); return Date.now() - ts < CACHE_TTL ? data : null; } catch { return null; } })();
+      fetchPinnedSessions(!cached);
     }
   }, [user]);
 
-  const fetchPinnedSessions = async () => {
+  const fetchPinnedSessions = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/interview/pinned', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch(`${API_URL}/interview/pinned`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
 
-      if (response.status === 401) {
-        toast.error('Session expired. Please login again.');
-        return;
-      }
+      if (response.status === 401) { toast.error('Session expired. Please login again.'); return; }
 
       if (response.ok) {
         const data = await response.json();
-        setPinnedSessions(data.pinned_sessions || []);
+        const sessions = data.pinned_sessions || [];
+        localStorage.setItem('cache_pinned', JSON.stringify({ data: sessions, ts: Date.now() }));
+        setPinnedSessions(sessions);
       } else {
-        setError('Failed to fetch pinned sessions');
-        toast.error('Failed to fetch pinned sessions');
+        if (showLoader) { setError('Failed to fetch pinned sessions'); toast.error('Failed to fetch pinned sessions'); }
       }
     } catch (err) {
-      setError('Network error occurred');
-      toast.error('Network error occurred');
-      console.error('Error fetching pinned sessions:', err);
+      if (showLoader) { setError('Network error occurred'); toast.error('Network error occurred'); }
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ const PinnedResults = () => {
       }
 
       if (response.ok) {
-        // Remove from pinned sessions
+        localStorage.removeItem('cache_pinned');
         setPinnedSessions(prev => prev.filter(session => session.thread_id !== sessionId));
       } else {
         setError('Failed to unpin session');

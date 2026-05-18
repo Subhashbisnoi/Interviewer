@@ -88,14 +88,64 @@ const FormattedRoadmap = ({ content }) => {
   );
 };
 
+function readCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { data } = JSON.parse(raw);
+    return data || null;
+  } catch { return null; }
+}
+
+// v2: clears old session detail caches that lack question_number
+if (!localStorage.getItem('cache_v2')) {
+  Object.keys(localStorage).filter(k => k.startsWith('chatHistory_session_')).forEach(k => localStorage.removeItem(k));
+  localStorage.setItem('cache_v2', '1');
+}
+
 const ChatHistory = () => {
   const { user } = useAuth();
   const toast = useToast();
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState(() => readCache('chatHistory_sessions') || []);
+  const [loading, setLoading] = useState(!readCache('chatHistory_sessions'));
   const [error, setError] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   
+  const [bestAnswers, setBestAnswers] = useState({}); // { "sessionId-qNum": { loading, text } }
+
+  const fetchBestAnswer = async (sessionId, questionNumber, questionText, answerText, regenerate = false) => {
+    const key = `${sessionId}-${questionNumber}`;
+    setBestAnswers(prev => ({ ...prev, [key]: { ...prev[key], loading: true } }));
+    try {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/interview/best-answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          session_id: sessionId,
+          question_number: questionNumber,
+          question: questionText,
+          user_answer: answerText,
+          regenerate,
+        }),
+      });
+      if (res.status === 402) {
+        toast.error('Not enough credits to generate best answer');
+        setBestAnswers(prev => ({ ...prev, [key]: { ...prev[key], loading: false } }));
+        return;
+      }
+      const data = await res.json();
+      if (!data.from_cache && data.credits_used > 0) {
+        toast.success(`Best answer generated (-${data.credits_used} credits)`);
+      }
+      setBestAnswers(prev => ({ ...prev, [key]: { loading: false, text: data.best_answer } }));
+    } catch {
+      toast.error('Failed to generate best answer. Please try again.');
+      setBestAnswers(prev => ({ ...prev, [key]: { ...prev[key], loading: false } }));
+    }
+  };
+
   // Search and Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -113,7 +163,24 @@ const ChatHistory = () => {
     }
   }, [user]);
 
-  const fetchChatHistory = async () => {
+  const CACHE_TTL_SESSIONS = 30 * 60 * 1000;  // 30 min for sessions list
+  const CACHE_TTL_DETAIL  = 60 * 60 * 1000;  // 60 min for session messages
+
+  const fetchChatHistory = async (forceRefresh = false) => {
+    const cacheKey = 'chatHistory_sessions';
+    if (!forceRefresh) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < CACHE_TTL_SESSIONS) {
+            setSessions(data);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+    }
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
@@ -136,7 +203,9 @@ const ChatHistory = () => {
       }
 
       const data = await response.json();
-      setSessions(data.sessions || []);
+      const sessions = data.sessions || [];
+      setSessions(sessions);
+      localStorage.setItem(cacheKey, JSON.stringify({ data: sessions, ts: Date.now() }));
     } catch (err) {
       setError(err.message || 'Failed to load chat history');
       toast.error('Failed to load chat history');
@@ -257,24 +326,51 @@ const ChatHistory = () => {
   };
 
   const handleViewDetails = async (session) => {
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    const cacheKey = `chatHistory_session_${session.session_id}`;
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/interview/session/${session.session_id}/chat`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+
+      // Load messages (with cache)
+      let messages;
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < CACHE_TTL_DETAIL) {
+            messages = data;
           }
         }
-      );
+      } catch {}
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch session details');
+      if (!messages) {
+        const response = await fetch(`${API_URL}/interview/session/${session.session_id}/chat`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) throw new Error('Failed to fetch session details');
+        const details = await response.json();
+        messages = details.messages;
+        localStorage.setItem(cacheKey, JSON.stringify({ data: messages, ts: Date.now() }));
       }
 
-      const details = await response.json();
-      setSelectedSession({ ...session, details: details.messages });
+      setSelectedSession({ ...session, details: messages });
+
+      // Load saved best answers for this session
+      try {
+        const baRes = await fetch(`${API_URL}/interview/session/${session.session_id}/best-answers`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (baRes.ok) {
+          const savedBestAnswers = await baRes.json();
+          const updates = {};
+          Object.entries(savedBestAnswers).forEach(([qNum, text]) => {
+            updates[`${session.session_id}-${qNum}`] = { loading: false, text };
+          });
+          if (Object.keys(updates).length > 0) {
+            setBestAnswers(prev => ({ ...prev, ...updates }));
+          }
+        }
+      } catch {}
     } catch (err) {
       console.error('Error fetching session details:', err);
       setError('Failed to load session details');
@@ -663,8 +759,9 @@ const ChatHistory = () => {
                             </h3>
                             <div className="space-y-4">
                               {questions.map((question, index) => {
-                                const answer = answers.find(a => a.question_number === question.question_number);
-                                const feedbackItem = feedback.find(f => f.question_number === question.question_number);
+                                const qNum = question.question_number ?? (index + 1);
+                                const answer = answers.find(a => (a.question_number ?? (answers.indexOf(a) + 1)) === qNum) || answers[index];
+                                const feedbackItem = feedback.find(f => f.question_number === qNum) || feedback[index];
                                 
                                 return (
                                   <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-white dark:bg-gray-750">
@@ -673,25 +770,67 @@ const ChatHistory = () => {
                                       <div>
                                         <div className="flex items-center mb-2">
                                           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 text-sm font-medium mr-2">
-                                            Q{question.question_number}
+                                            Q{qNum}
                                           </span>
                                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Question</span>
                                         </div>
                                         <p className="text-gray-800 dark:text-gray-200 ml-8">{question.content}</p>
                                       </div>
-                                      
+
                                       {/* Answer */}
-                                      {answer && (
+                                      {answer && (() => {
+                                        const key = `${selectedSession.session_id}-${qNum}`;
+                                        const bestAnswer = bestAnswers[key];
+                                        return (
                                         <div>
                                           <div className="flex items-center mb-2">
                                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-sm font-medium mr-2">
-                                              A{answer.question_number}
+                                              A{qNum}
                                             </span>
                                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Answer</span>
                                           </div>
                                           <p className="text-gray-800 dark:text-gray-200 ml-8 bg-gray-50 dark:bg-gray-700 p-3 rounded">{answer.content}</p>
+                                          {/* Best Answer */}
+                                          <div className="ml-8 mt-2">
+                                            {!bestAnswer?.text && (
+                                              <button
+                                                onClick={() => fetchBestAnswer(selectedSession.session_id, qNum, question.content, answer.content, false)}
+                                                disabled={bestAnswer?.loading}
+                                                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors disabled:opacity-50"
+                                              >
+                                                {bestAnswer?.loading ? (
+                                                  <><span className="animate-spin inline-block w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full"></span> Generating...</>
+                                                ) : (
+                                                  <><Star className="h-3.5 w-3.5" /> Show Best Answer (2 credits)</>
+                                                )}
+                                              </button>
+                                            )}
+                                            {bestAnswer?.text && (
+                                              <div className="mt-2">
+                                                <div className="flex items-center justify-between mb-1">
+                                                  <div className="flex items-center gap-1.5">
+                                                    <Star className="h-4 w-4 text-purple-500" />
+                                                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Best Answer</span>
+                                                  </div>
+                                                  <button
+                                                    onClick={() => fetchBestAnswer(selectedSession.session_id, qNum, question.content, answer.content, true)}
+                                                    disabled={bestAnswer?.loading}
+                                                    className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                                                  >
+                                                    {bestAnswer?.loading ? (
+                                                      <><span className="animate-spin inline-block w-2.5 h-2.5 border-2 border-gray-400 border-t-transparent rounded-full"></span> Regenerating...</>
+                                                    ) : (
+                                                      <>↻ Regenerate (2 credits)</>
+                                                    )}
+                                                  </button>
+                                                </div>
+                                                <p className="text-gray-800 dark:text-gray-200 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 p-3 rounded">{bestAnswer.text}</p>
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
-                                      )}
+                                        );
+                                      })()}
                                       
                                       {/* Feedback */}
                                       {feedbackItem && (

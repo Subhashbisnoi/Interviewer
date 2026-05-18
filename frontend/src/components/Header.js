@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 import logo from '../images/ChatGPT_Image_Dec_12__2025_at_11_57_18_AM-removebg-preview.png';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Zap } from 'lucide-react';
 
 const Header = () => {
   const location = useLocation();
@@ -30,14 +30,6 @@ const Header = () => {
 
   // Navigation items for the header (product-focused, not app navigation)
   const navItems = [
-    {
-      label: 'Features',
-      dropdown: [
-        { label: 'AI Mock Interviews', href: '/#features', description: 'Practice with realistic AI interviewer' },
-        { label: 'Real-time Feedback', href: '/#features', description: 'Get instant performance analysis' },
-        { label: 'Voice Interviews', href: '/#features', description: 'Practice speaking naturally' },
-      ]
-    },
     { label: 'How It Works', href: '/#how-it-works' },
     { label: 'Tips', href: '/tips' },
     { label: 'Resources', href: '/resources' },
@@ -131,9 +123,14 @@ const Header = () => {
                     <div className="h-7 w-7 rounded-full bg-amber-500 flex items-center justify-center text-white font-semibold text-sm">
                       {user.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
-                    <span className="hidden md:inline text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {user.name || user.email.split('@')[0]}
-                    </span>
+                    <div className="hidden md:flex flex-col items-start">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-tight">
+                        {user.full_name || user.name || user.email.split('@')[0]}
+                      </span>
+                      <span className="text-xs text-blue-500 dark:text-blue-400 font-semibold leading-tight flex items-center gap-0.5">
+                        <Zap className="h-3 w-3" />{user.credits ?? 0} credits
+                      </span>
+                    </div>
                     <ChevronDown className="h-4 w-4 text-slate-500" />
                   </button>
 
@@ -147,6 +144,31 @@ const Header = () => {
                           {user.email}
                         </p>
                       </div>
+
+                      {/* Credit balance */}
+                      <div className="px-4 py-2 flex items-center justify-between">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">Credits</span>
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
+                          {user.credits ?? 0}
+                        </span>
+                      </div>
+                      <Link
+                        to="/pricing"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center px-4 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      >
+                        + Top up credits
+                      </Link>
+
+                      <div className="border-t border-slate-200 dark:border-slate-700 my-1" />
+
+                      <Link
+                        to="/profile"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      >
+                        👤 My Profile
+                      </Link>
 
                       <Link
                         to="/dashboard"

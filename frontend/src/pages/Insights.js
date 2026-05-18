@@ -107,7 +107,7 @@ const Insights = () => {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <SEO
                 title="Career Insights & Hiring Trends"
-                description="Stay ahead with the latest hiring trends, interview insights, and career preparation strategies for 2025."
+                description="Stay ahead with the latest hiring trends, interview insights, and career preparation strategies for 2026."
             />
 
             {/* Hero Section */}
@@ -116,7 +116,7 @@ const Insights = () => {
                     <TrendingUp className="w-16 h-16 mx-auto mb-6 text-cyan-300" />
                     <h1 className="text-4xl font-bold mb-4">Career Insights & Trends</h1>
                     <p className="text-xl text-indigo-200 max-w-2xl mx-auto">
-                        What interviewers are looking for in 2025 and how to stand out.
+                        What interviewers are looking for in 2026 and how to stand out.
                     </p>
                 </div>
             </section>
@@ -125,7 +125,7 @@ const Insights = () => {
             <section className="py-16">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-12">
-                        2025 Hiring Trends
+                        2026 Hiring Trends
                     </h2>
                     <div className="grid md:grid-cols-3 gap-8">
                         {trends.map((trend, index) => (

@@ -11,13 +11,14 @@ class UserCreate(UserBase):
 class UserInDB(UserBase):
     id: int
     is_active: bool
+    credits: int = 0
 
     class Config:
         from_attributes = True
 
 class UserResponse(UserInDB):
     """User response model for API responses"""
-    pass
+    credits: int = 0
 
 class Token(BaseModel):
     access_token: str

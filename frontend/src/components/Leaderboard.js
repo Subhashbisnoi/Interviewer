@@ -5,6 +5,17 @@ import { Trophy, Medal, Award, TrendingUp, Users, Filter, Crown, Star, Target, Z
 
 const Leaderboard = () => {
   const { user } = useAuth();
+  const CACHE_TTL = 10 * 60 * 1000; // 10 min for leaderboard
+
+  const readLeaderboardCache = (tf, rf) => {
+    try {
+      const raw = localStorage.getItem(`cache_leaderboard_${tf}_${rf}`);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw);
+      return Date.now() - ts < CACHE_TTL ? data : null;
+    } catch { return null; }
+  };
+
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -14,12 +25,21 @@ const Leaderboard = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchLeaderboard();
+    const cached = readLeaderboardCache(timeframe, roleFilter);
+    if (cached) {
+      setLeaderboard(cached.leaderboard || []);
+      setCurrentUser(cached.current_user);
+      setTotalUsers(cached.total_users || 0);
+      setLoading(false);
+      fetchLeaderboard(true); // background refresh
+    } else {
+      fetchLeaderboard(false);
+    }
   }, [timeframe, roleFilter]);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const token = localStorage.getItem('token');
       const params = new URLSearchParams({
         timeframe,
@@ -36,17 +56,15 @@ const Leaderboard = () => {
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch leaderboard');
-      }
+      if (!response.ok) throw new Error('Failed to fetch leaderboard');
 
       const data = await response.json();
+      localStorage.setItem(`cache_leaderboard_${timeframe}_${roleFilter}`, JSON.stringify({ data, ts: Date.now() }));
       setLeaderboard(data.leaderboard || []);
       setCurrentUser(data.current_user);
       setTotalUsers(data.total_users || 0);
     } catch (err) {
-      setError(err.message || 'Failed to load leaderboard');
-      console.error('Error fetching leaderboard:', err);
+      if (!background) setError(err.message || 'Failed to load leaderboard');
     } finally {
       setLoading(false);
     }
@@ -138,7 +156,7 @@ const Leaderboard = () => {
               <span className="text-blue-100 text-sm font-medium">Avg Score</span>
               <TrendingUp className="h-5 w-5 text-blue-200" />
             </div>
-            <p className="text-3xl font-bold">{currentUser.average_score.toFixed(1)}</p>
+            <p className="text-3xl font-bold">{(currentUser.average_score ?? 0).toFixed(1)}</p>
             <p className="text-blue-100 text-xs mt-1">out of 10.0</p>
           </div>
 
@@ -147,7 +165,7 @@ const Leaderboard = () => {
               <span className="text-green-100 text-sm font-medium">Best Score</span>
               <Star className="h-5 w-5 text-green-200" />
             </div>
-            <p className="text-3xl font-bold">{currentUser.best_score.toFixed(1)}</p>
+            <p className="text-3xl font-bold">{(currentUser.best_score ?? 0).toFixed(1)}</p>
             <p className="text-green-100 text-xs mt-1">personal best</p>
           </div>
 
@@ -256,7 +274,7 @@ const Leaderboard = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Score</p>
                       <div className={`px-3 py-1 rounded-full ${getScoreBg(entry.average_score)}`}>
                         <span className={`text-lg font-bold ${getScoreColor(entry.average_score)}`}>
-                          {entry.average_score.toFixed(1)}
+                          {(entry.average_score ?? 0).toFixed(1)}
                         </span>
                         <span className="text-xs text-gray-600 dark:text-gray-400">/10</span>
                       </div>
@@ -268,7 +286,7 @@ const Leaderboard = () => {
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 text-yellow-500" />
                         <span className="text-lg font-bold text-gray-900 dark:text-white">
-                          {entry.best_score.toFixed(1)}
+                          {(entry.best_score ?? 0).toFixed(1)}
                         </span>
                       </div>
                     </div>
@@ -321,7 +339,7 @@ const Leaderboard = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Score</p>
                       <div className={`px-3 py-1 rounded-full ${getScoreBg(currentUser.average_score)}`}>
                         <span className={`text-lg font-bold ${getScoreColor(currentUser.average_score)}`}>
-                          {currentUser.average_score.toFixed(1)}
+                          {(currentUser.average_score ?? 0).toFixed(1)}
                         </span>
                         <span className="text-xs text-gray-600 dark:text-gray-400">/10</span>
                       </div>
@@ -332,7 +350,7 @@ const Leaderboard = () => {
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 text-yellow-500" />
                         <span className="text-lg font-bold text-gray-900 dark:text-white">
-                          {currentUser.best_score.toFixed(1)}
+                          {(currentUser.best_score ?? 0).toFixed(1)}
                         </span>
                       </div>
                     </div>

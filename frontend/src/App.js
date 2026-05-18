@@ -12,7 +12,6 @@ import Home from './components/Home';
 import Interview from './components/Interview';
 import Result from './components/Result';
 import ChatHistory from './components/ChatHistory';
-import PinnedResults from './components/PinnedResults';
 import Leaderboard from './components/Leaderboard';
 import Pricing from './components/Pricing';
 import Dashboard from './pages/Dashboard';
@@ -37,6 +36,8 @@ import AdManager from './components/AdManager';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminInterviewDetails from './pages/AdminInterviewDetails';
+import ProfilePage from './pages/ProfilePage';
+import CompanyPortal, { CompanyRegister } from './pages/CompanyPortal';
 import './App.css';
 
 // Component to handle OAuth callbacks
@@ -151,14 +152,6 @@ const AppContent = () => {
               }
             />
             <Route
-              path="/pinned"
-              element={
-                <ProtectedRoute>
-                  <PinnedResults />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/leaderboard"
               element={<Leaderboard />}
             />
@@ -166,6 +159,17 @@ const AppContent = () => {
               path="/pricing"
               element={<Pricing />}
             />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/company" element={<CompanyPortal />} />
+            <Route path="/company/login" element={<CompanyPortal />} />
+            <Route path="/company/register" element={<CompanyRegister />} />
             <Route
               path="/contact"
               element={<ContactUs />}

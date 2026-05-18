@@ -1,24 +1,20 @@
-"""Patch missing user_profiles columns for production
+"""Patch missing user_profiles columns for production (v2)
 
-Revision ID: i3j4k5l6m7n8
-Revises: h2i3j4k5l6m7
+Revision ID: j4k5l6m7n8o9
+Revises: i3j4k5l6m7n8
 Create Date: 2026-05-19
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'i3j4k5l6m7n8'
-down_revision = 'h2i3j4k5l6m7'
+revision = 'j4k5l6m7n8o9'
+down_revision = 'i3j4k5l6m7n8'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    # Use op.execute with raw SQL — works in all SQLAlchemy versions
-    # ADD COLUMN IF NOT EXISTS is safe to run even if column already exists
-
     stmts = [
-        # user_profiles base columns
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS headline VARCHAR",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS bio TEXT",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS location VARCHAR",
@@ -34,7 +30,6 @@ def upgrade():
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS portfolio_url VARCHAR",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_text TEXT",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS is_visible_to_recruiters BOOLEAN DEFAULT true",
-        # scoring columns (safe re-add)
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_score FLOAT",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS linkedin_score FLOAT",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS github_score FLOAT",
@@ -53,9 +48,7 @@ def upgrade():
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS linkedin_feedback TEXT",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT now()",
         "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT now()",
-        # users credits
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER DEFAULT 20",
-        # interview_sessions score columns
         "ALTER TABLE interview_sessions ADD COLUMN IF NOT EXISTS plan_type VARCHAR DEFAULT 'normal'",
         "ALTER TABLE interview_sessions ADD COLUMN IF NOT EXISTS credits_used INTEGER DEFAULT 0",
         "ALTER TABLE interview_sessions ADD COLUMN IF NOT EXISTS score_technical FLOAT",

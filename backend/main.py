@@ -16,9 +16,66 @@ if current_dir not in sys.path:
 
 # Initialize database before importing routers
 from database import Base, engine
+from sqlalchemy import text
 
-# Note: Database tables are created by init_production_db.py in startCommand
-# This ensures DATABASE_URL from Render is used instead of SQLite fallback
+# Run ADD COLUMN IF NOT EXISTS on every startup to ensure production DB is up to date
+def _patch_db():
+    _cols = [
+        ("user_profiles", "headline",                "VARCHAR"),
+        ("user_profiles", "bio",                     "TEXT"),
+        ("user_profiles", "location",                "VARCHAR"),
+        ("user_profiles", "avatar_url",              "VARCHAR"),
+        ("user_profiles", "target_roles",            "JSON"),
+        ("user_profiles", "experience_years",        "FLOAT DEFAULT 0"),
+        ("user_profiles", "skills",                  "JSON"),
+        ("user_profiles", "work_experience",         "JSON"),
+        ("user_profiles", "education",               "JSON"),
+        ("user_profiles", "projects",                "JSON"),
+        ("user_profiles", "linkedin_url",            "VARCHAR"),
+        ("user_profiles", "github_url",              "VARCHAR"),
+        ("user_profiles", "portfolio_url",           "VARCHAR"),
+        ("user_profiles", "resume_text",             "TEXT"),
+        ("user_profiles", "is_visible_to_recruiters","BOOLEAN DEFAULT true"),
+        ("user_profiles", "resume_score",            "FLOAT"),
+        ("user_profiles", "linkedin_score",          "FLOAT"),
+        ("user_profiles", "github_score",            "FLOAT"),
+        ("user_profiles", "profile_score",           "FLOAT"),
+        ("user_profiles", "profile_completion",      "FLOAT DEFAULT 0"),
+        ("user_profiles", "resume_filename",         "VARCHAR"),
+        ("user_profiles", "resume_uploaded_at",      "TIMESTAMP"),
+        ("user_profiles", "streak_days",             "INTEGER DEFAULT 0"),
+        ("user_profiles", "last_active_date",        "DATE"),
+        ("user_profiles", "daily_activity",          "JSON"),
+        ("user_profiles", "resume_score_breakdown",  "JSON"),
+        ("user_profiles", "github_score_breakdown",  "JSON"),
+        ("user_profiles", "linkedin_score_breakdown","JSON"),
+        ("user_profiles", "resume_feedback",         "TEXT"),
+        ("user_profiles", "github_feedback",         "TEXT"),
+        ("user_profiles", "linkedin_feedback",       "TEXT"),
+        ("user_profiles", "created_at",              "TIMESTAMP DEFAULT now()"),
+        ("user_profiles", "updated_at",              "TIMESTAMP DEFAULT now()"),
+        ("users",         "credits",                 "INTEGER DEFAULT 20"),
+        ("interview_sessions", "plan_type",              "VARCHAR DEFAULT 'normal'"),
+        ("interview_sessions", "credits_used",           "INTEGER DEFAULT 0"),
+        ("interview_sessions", "score_technical",        "FLOAT"),
+        ("interview_sessions", "score_communication",    "FLOAT"),
+        ("interview_sessions", "score_leadership",       "FLOAT"),
+        ("interview_sessions", "score_critical_thinking","FLOAT"),
+        ("interview_sessions", "score_decision_making",  "FLOAT"),
+        ("interview_sessions", "score_project_knowledge","FLOAT"),
+    ]
+    try:
+        with engine.connect() as conn:
+            for table, col, col_type in _cols:
+                conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                ))
+            conn.commit()
+        print("✅ DB patch applied")
+    except Exception as e:
+        print(f"⚠️  DB patch warning: {e}")
+
+_patch_db()
 
 # Import the routers after database initialization
 from api.interview import router as interview_router

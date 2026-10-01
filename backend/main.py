@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import uuid
 from datetime import datetime
 from fastapi import FastAPI, Request, Response
@@ -75,7 +76,9 @@ def _patch_db():
     except Exception as e:
         print(f"⚠️  DB patch warning: {e}")
 
-_patch_db()
+# Run in the background: the port must be bound quickly (Catalyst AppSail kills
+# instances that aren't listening within 10s), and the patch takes ~15s against a remote DB
+threading.Thread(target=_patch_db, name="db-patch", daemon=True).start()
 
 # Import the routers after database initialization
 from api.interview import router as interview_router

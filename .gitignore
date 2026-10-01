@@ -1,0 +1,5 @@
+# Catalyst AppSail: env_variables holds secrets; build output is generated
+app-config.json
+catalyst-build/
+*.env
+.env
